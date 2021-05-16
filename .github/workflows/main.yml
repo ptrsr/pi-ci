@@ -1,0 +1,11 @@
+name: Build RPI kernel
+on: [push]
+
+jobs:
+    compile_kernel:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+            - name: use kernel action
+              uses: ./actions/kernel

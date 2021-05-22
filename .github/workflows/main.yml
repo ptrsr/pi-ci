@@ -2,10 +2,30 @@ name: Build RPI kernel
 on: [push]
 
 jobs:
-    compile_kernel:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v2
-            - name: use kernel action
-              uses: ./actions/kernel
+  compile_kernel:
+    runs-on: ubuntu-20.04
+    steps:
+      # Check out code
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Use the buildx runner to allow caching
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1 
+
+      # Setup cache using a hash
+      - name: Cache register
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: buildx
+
+      # - name: use kernel action
+      #   uses: ./actions/kernel
+
+      # Test Dockerfile build
+      - name: test docker image
+        uses: docker://./actions/kernel
+
+

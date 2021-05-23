@@ -5,17 +5,20 @@ jobs:
   compile_kernel:
     runs-on: ubuntu-20.04
     steps:
-      # Check out code
-      - name: Checkout
+      - # Check out project
+        name: Checkout
         uses: actions/checkout@v2
 
-      # Use the buildx runner to allow caching
-      - name: Set up Docker Buildx
+      
+      - # Use the buildx runner for caching layers
+        name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1 
-
-      # Setup cache using a hash
-      - name: Cache register
+        uses: docker/setup-buildx-action@v1
+        # with:
+          # install: true
+      
+      - # Setup cache using a hash
+        name: Cache register
         uses: actions/cache@v2
         with:
           path: /tmp/.buildx-cache
@@ -24,8 +27,11 @@ jobs:
       # - name: use kernel action
       #   uses: ./actions/kernel
 
-      # Test Dockerfile build
-      - name: test docker image
-        uses: docker://./actions/kernel
+      - # Test Dockerfile build
+        name: Build docker image
+        run: |
+          docker buildx build -t ptrsr/pi-linux --cache-from=/tmp/.buildx-cache --cache-to=/tmp/.buildx-cache-new .
+          rm -r /tmp.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
 

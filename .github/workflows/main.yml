@@ -24,9 +24,6 @@ jobs:
           path: /tmp/.buildx-cache
           key: buildx
 
-      # - name: use kernel action
-      #   uses: ./actions/kernel
-
       - # Test Dockerfile build
         name: Build docker image
         run: |
@@ -35,7 +32,21 @@ jobs:
             --cache-to=type=local,dest=/tmp/.buildx-cache-new \
             -t ptrsr/pi-linux .
 
-          rm -r /tmp.buildx-cache
+          rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
+      - # Copy kernel files
+        name: Copy kernel files
+        run: |
+          docker run \
+            -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
+            -w $GITHUB_WORKSPACE \
+            ptrsr/pi-linux \
+            cp /linux/arch/arm64/boot/Image ./
 
+      - # Upload kernel artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: my-artifact
+          path: |
+            $GITHUB_WORKSPACE/Image

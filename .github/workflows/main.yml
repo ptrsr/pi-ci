@@ -30,8 +30,6 @@ jobs:
       - # Test Dockerfile build
         name: Build docker image
         run: |
-          docker buildx build -t ptrsr/pi-linux --cache-from=/tmp/.buildx-cache --cache-to=/tmp/.buildx-cache-new .
-          rm -r /tmp.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          docker build -t ptrsr/pi-linux .
 
 

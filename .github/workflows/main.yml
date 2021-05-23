@@ -4,12 +4,13 @@ on: [push]
 jobs:
   compile_kernel:
     runs-on: ubuntu-20.04
+    env:
+      IMAGE_NAME: ptrsr/pi-kernel
     steps:
       - # Check out project
         name: Checkout
         uses: actions/checkout@v2
 
-      
       - # Use the buildx runner for caching layers
         name: Set up Docker Buildx
         id: buildx
@@ -30,7 +31,8 @@ jobs:
           docker buildx build \
             --cache-from=type=local,src=/tmp/.buildx-cache \
             --cache-to=type=local,dest=/tmp/.buildx-cache-new \
-            -t ptrsr/pi-linux .
+            --output type=docker \
+            -t ptrsr/pi-kernel:latest .
 
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
@@ -41,12 +43,12 @@ jobs:
           docker run \
             -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
             -w $GITHUB_WORKSPACE \
-            ptrsr/pi-linux \
-            cp /linux/arch/arm64/boot/Image ./
+            ptrsr/pi-kernel:latest \
+            echo "hello world!"
 
-      - # Upload kernel artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: my-artifact
-          path: |
-            $GITHUB_WORKSPACE/Image
+      # - # Upload kernel artifacts
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: my-artifact
+      #     path: |
+      #       $GITHUB_WORKSPACE/Image

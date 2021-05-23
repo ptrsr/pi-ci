@@ -23,9 +23,9 @@ RUN apt-get update \
     libc6-dev \
     make
 
-RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT /linux/
+# RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT /linux/
 
-COPY ./.config /linux/
+# COPY ./.config /linux/
 
 # RUN make -C /linux/ -j4 Image
 

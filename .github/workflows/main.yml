@@ -2,10 +2,11 @@ name: Build RPI kernel
 on: [push]
 
 jobs:
-  compile_kernel:
+  compile-kernel:
     runs-on: ubuntu-20.04
     env:
       IMAGE_NAME: ptrsr/pi-kernel
+
     steps:
       - # Check out project
         name: Checkout
@@ -15,8 +16,6 @@ jobs:
         name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
-        # with:
-          # install: true
       
       - # Setup cache using a hash
         name: Cache register

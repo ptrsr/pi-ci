@@ -12,24 +12,25 @@ ARG CROSS_COMPILE=aarch64-linux-gnu-
 # Install packages
 ARG DEBIAN_FRONTEND="noninteractive"
 
-# RUN apt-get update \
-#  && apt install -y \
-#     bc \
-#     bison \
-#     crossbuild-essential-arm64 \
-#     flex \
-#     git \
-#     libssl-dev \
-#     libc6-dev \
-#     make
+RUN apt-get update \
+ && apt install -y \
+    bc \
+    bison \
+    crossbuild-essential-arm64 \
+    flex \
+    git \
+    libssl-dev \
+    libc6-dev \
+    make
 
-# RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT /linux/
+RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT /linux/
 
-# COPY ./.config /linux/
+COPY ./.config /linux/
 
-# RUN make -C /linux/ -j5 Image modules dtbs
+ARG CORES=2
+RUN make -C /linux/ -j$CORES Image modules dtbs
 
-# ENTRYPOINT ./tools/copy.sh
+ENTRYPOINT ./tools/copy.sh
 
 # RUN make -C /linux bcmrpi3_defconfig
 

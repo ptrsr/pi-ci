@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mkdir -p /project/dist
-cp /build/distro.img /project/dist/distro.img
-cp /build/linux/arch/arm64/boot/Image /project/dist/kernel8.img
-cp /build/linux/arch/arm64/boot/dts/broadcom/bcm2710-rpi-3-b.dtb /project/dist/pi3.dtb
+mkdir -p ./dist
+cp /build/distro.img ./dist/
+cp /build/kernel8.img ./dist/
+cp /build/pi3.dtb ./dist/

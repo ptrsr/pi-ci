@@ -43,31 +43,38 @@ COPY ./.config $BUILD_DIR/linux/
 # Build kernel, kernel modules and device tree blobs
 RUN make -C $BUILD_DIR/linux/ -j$CORES Image modules dtbs
 
-# # Download distro and rename to distro.img
-# RUN wget -nv -O $BUILD_DIR/$DISTRO_FILE.zip $DISTRO_IMG \
-#  && unzip $BUILD_DIR/$DISTRO_FILE.zip -d $BUILD_DIR \
-#  && mv $BUILD_DIR/$DISTRO_FILE.img $BUILD_DIR/distro.img
+# Download distro and rename to distro.img
+RUN wget -nv -O $BUILD_DIR/$DISTRO_FILE.zip $DISTRO_IMG \
+ && unzip $BUILD_DIR/$DISTRO_FILE.zip -d $BUILD_DIR \
+ && mv $BUILD_DIR/$DISTRO_FILE.img $BUILD_DIR/distro.img \
+ && rm $BUILD_DIR/$DISTRO_FILE.zip
 
-# # Extract distro partitions content
-# RUN mkdir /mnt/root /mnt/boot \
-#  && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root
+# Extract distro partitions content
+RUN mkdir /mnt/root /mnt/boot \
+ && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root \
+ && rm $BUILD_DIR/distro.img
 
-# # Replace kernel, kernel modules and device tree blobs
-# RUN rm -r /mnt/root/lib/modules/* \
-#  && rm /mnt/boot/*.dtb \
-#  && rm /mnt/boot/overlays/* \
-#  && rm /mnt/boot/kernel8.img \
-#  && cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
-#  && make -C $BUILD_DIR/linux/ INSTALL_MOD_PATH=/mnt/root modules_install \
-#  && cp $BUILD_DIR/linux/arch/arm64/boot/dts/broadcom/*.dtb /mnt/boot/ \
-#  && cp $BUILD_DIR/linux/arch/arm64/boot/dts/overlays/*.dtb* /mnt/boot/overlays/
+# Replace kernel, kernel modules and device tree blobs
+RUN rm -r /mnt/root/lib/modules/* \
+ && rm /mnt/boot/*.dtb \
+ && rm /mnt/boot/overlays/* \
+ && rm /mnt/boot/kernel8.img \
+ && cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
+ && make -C $BUILD_DIR/linux/ INSTALL_MOD_PATH=/mnt/root modules_install \
+ && cp $BUILD_DIR/linux/arch/arm64/boot/dts/broadcom/*.dtb /mnt/boot/ \
+ && cp $BUILD_DIR/linux/arch/arm64/boot/dts/overlays/*.dtb* /mnt/boot/overlays/ \
+ && rm -r $BUILD_DIR/linux
 
-# # Create new image from modified configuration
-# RUN guestfish -N distro2.img=bootroot:vfat:ext4:2G \
-#  && guestfish add distro2.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / 
+# Create new image from modified configuration
+RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
+ && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / 
 
-# COPY ./tools/copy.sh /build/
-# ENTRYPOINT /build/copy.sh
+RUN cp /mnt/boot/bcm2710-rpi-3-b.dtb $BUILD_DIR/pi3.dtb \
+ && cp /mnt/boot/kernel8.img $BUILD_DIR
+
+COPY ./tools/copy.sh /build/
+
+ENTRYPOINT /build/copy.sh
 
 
 # # ---------------------------

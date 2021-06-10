@@ -36,17 +36,17 @@ jobs:
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-      - # Copy kernel files
-        name: Copy kernel files
-        run: |
-          docker run \
-            -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
-            -w $GITHUB_WORKSPACE \
-            $IMAGE_NAME
+      # - # Copy kernel files
+      #   name: Copy kernel files
+      #   run: |
+      #     docker run \
+      #       -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
+      #       -w $GITHUB_WORKSPACE \
+      #       $IMAGE_NAME
 
-      - # Upload kernel artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: pi
-          path: |
-            $GITHUB_WORKSPACE/dist/
+      # - # Upload kernel artifacts
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: pi
+      #     path: |
+      #       $GITHUB_WORKSPACE/dist/

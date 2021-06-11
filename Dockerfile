@@ -67,7 +67,10 @@ RUN rm -r /mnt/root/lib/modules/* \
 
 # Create new image from modified configuration
 RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
- && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / 
+ && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
+ && qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2 \
+ && rm $BUILD_DIR/distro.img
+
 
 RUN cp /mnt/boot/bcm2710-rpi-3-b.dtb $BUILD_DIR/pi3.dtb \
  && cp /mnt/boot/kernel8.img $BUILD_DIR

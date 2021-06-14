@@ -34,88 +34,85 @@ RUN apt-get update \
     libguestfs-tools \
     linux-image-generic
 
-# Clone the kernel source repo
-RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
+# Provide predefined build configuration
+COPY ./.config $BUILD_DIR
 
-# Use predefined build configuration
-COPY ./.config $BUILD_DIR/linux/
-
-# Build kernel, kernel modules and device tree blobs
-RUN make -C $BUILD_DIR/linux/ -j$CORES Image modules dtbs
-
-# Download distro and rename to distro.img
+# TODO: remove zip?
+# Download distro and extract the distro's boot and root partitions
 RUN wget -nv -O $BUILD_DIR/$DISTRO_FILE.zip $DISTRO_IMG \
  && unzip $BUILD_DIR/$DISTRO_FILE.zip -d $BUILD_DIR \
- && mv $BUILD_DIR/$DISTRO_FILE.img $BUILD_DIR/distro.img \
- && rm $BUILD_DIR/$DISTRO_FILE.zip
+ && rm $BUILD_DIR/$DISTRO_FILE.zip \
+ && mkdir /mnt/root /mnt/boot \
+ && guestfish add $BUILD_DIR/$DISTRO_FILE.img : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root \
+ && rm $BUILD_DIR/$DISTRO_FILE.img
 
-# Extract distro partitions content
-RUN mkdir /mnt/root /mnt/boot \
- && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root \
- && rm $BUILD_DIR/distro.img
-
-# Replace kernel, kernel modules and device tree blobs
-RUN rm -r /mnt/root/lib/modules/* \
+# Clone the kernel source repo, build and copy the files to the distro
+RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/ \
+ && cp $BUILD_DIR/.config $BUILD_DIR/linux/ \
+ && make -C $BUILD_DIR/linux/ -j$CORES Image modules dtbs \
+ && rm -r /mnt/root/lib/modules/* \
  && rm /mnt/boot/*.dtb \
  && rm /mnt/boot/overlays/* \
  && rm /mnt/boot/kernel8.img \
  && cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
- && make -C $BUILD_DIR/linux/ INSTALL_MOD_PATH=/mnt/root modules_install \
  && cp $BUILD_DIR/linux/arch/arm64/boot/dts/broadcom/*.dtb /mnt/boot/ \
  && cp $BUILD_DIR/linux/arch/arm64/boot/dts/overlays/*.dtb* /mnt/boot/overlays/ \
- && rm -r $BUILD_DIR/linux
+ && make -C $BUILD_DIR/linux/ INSTALL_MOD_PATH=/mnt/root modules_install \
+ && rm -r $BUILD_DIR/linux/
 
-# Create new image from modified configuration
-RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
+# Create sparse image from modified configuration and copy all build files to distribution folder
+RUN mkdir $BUILD_DIR/dist \ 
+ && guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
  && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
- && qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2 \
- && rm $BUILD_DIR/distro.img
+ && qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/dist/distro.qcow2 \
+ && rm $BUILD_DIR/distro.img \
+ && cp /mnt/boot/bcm2710-rpi-3-b.dtb $BUILD_DIR/dist/pi3.dtb \
+ && cp /mnt/boot/kernel8.img $BUILD_DIR/dist
 
-
-RUN cp /mnt/boot/bcm2710-rpi-3-b.dtb $BUILD_DIR/pi3.dtb \
- && cp /mnt/boot/kernel8.img $BUILD_DIR
-
-COPY ./tools/copy.sh /build/
-
-ENTRYPOINT /build/copy.sh
-
+CMD cp $BUILD_DIR/dist ./
 
 # # ---------------------------
-# FROM ubuntu:20.04 as emulator
+FROM ubuntu:20.04 as emulator
 
-# # Project build directory
-# ARG BUILD_DIR=/build/
+# Project build directory
+ARG BUILD_DIR=/build/
 
-# ARG QEMU_GIT=https://github.com/qemu/qemu.git
-# ARG QEMU_BRANCH=v5.2.0
+ARG QEMU_GIT=https://github.com/qemu/qemu.git
+ARG QEMU_BRANCH=v5.2.0
 
-# # Install packages
-# ARG DEBIAN_FRONTEND="noninteractive"
-# RUN apt-get update && apt install -y \
-#     git \
-#     python3.8 \
-#     build-essential \
-#     ninja-build \
-#     cmake \
-#     pkg-config \
-#     libglib2.0-dev \
-#     libpixman-1-dev
+ARG BUILD_CORES=2
 
-# RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1
+# Install packages
+ARG DEBIAN_FRONTEND="noninteractive"
+RUN apt-get update && apt install -y \
+    git \
+    python3.8 \
+    build-essential \
+    ninja-build \
+    cmake \
+    pkg-config \
+    libglib2.0-dev \
+    libpixman-1-dev \
+ && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 \
+ && git clone --single-branch --branch \
+    $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/ \
+ && mkdir $BUILD_DIR/qemu/build \
+ && $(cd $BUILD_DIR/qemu/build && ../configure --target-list=aarch64-softmmu) \
+ && make -C $BUILD_DIR/qemu/build install -j$BUILD_CORES \
+ && rm -r $BUILD_DIR \
+ && apt-get remove -y \
+    git \
+    python3.8 \
+    build-essential \
+    ninja-build \
+    cmake \
+    pkg-config \
+    libglib2.0-dev \
+    libpixman-1-dev
 
-# # Build QEMU from source
-# RUN git clone --single-branch --branch \
-#     $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/
+# Setup project
+COPY bin/ /project/bin/
+COPY run.sh /project/
 
-# RUN mkdir /install/qemu/build
-# WORKDIR /install/qemu/build
-
-# RUN ../configure --target-list=aarch64-softmmu
-# RUN make install -j
-
-# # Setup project
-# COPY bin/ /project/bin/
-# COPY run.sh /project/
-
-# WORKDIR /project/
-# CMD /project/run.sh
+WORKDIR /project/
+CMD /project/run.sh

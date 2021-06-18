@@ -26,18 +26,18 @@ RUN apt-get update \
     crossbuild-essential-arm64 \
     flex \
     git \
-    libssl-dev \
+    gzip \
     libc6-dev \
-    make \
-    wget \
-    unzip \
     libguestfs-tools \
-    linux-image-generic
+    libssl-dev \
+    linux-image-generic \
+    make \
+    unzip \
+    wget
 
 # Provide predefined build configuration
-COPY ./.config $BUILD_DIR
+COPY src/.config $BUILD_DIR
 
-# TODO: remove zip?
 # Download distro and extract the distro's boot and root partitions
 RUN wget -nv -O $BUILD_DIR/$DISTRO_FILE.zip $DISTRO_IMG \
  && unzip $BUILD_DIR/$DISTRO_FILE.zip -d $BUILD_DIR \
@@ -60,11 +60,14 @@ RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/lin
  && make -C $BUILD_DIR/linux/ INSTALL_MOD_PATH=/mnt/root modules_install \
  && rm -r $BUILD_DIR/linux/
 
+COPY src/fstab /mnt/root/etc/
+
 # Create sparse image from modified configuration and copy all build files to distribution folder
 RUN mkdir $BUILD_DIR/dist \ 
  && guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
  && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
  && qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/dist/distro.qcow2 \
+ && gzip $BUILD_DIR/dist/distro.qcow2 \
  && rm $BUILD_DIR/distro.img \
  && cp /mnt/boot/bcm2710-rpi-3-b.dtb $BUILD_DIR/dist/pi3.dtb \
  && cp /mnt/boot/kernel8.img $BUILD_DIR/dist
@@ -82,37 +85,43 @@ ARG QEMU_BRANCH=v5.2.0
 
 ARG BUILD_CORES=2
 
-# Install packages
+# Install packages and build essentials
 ARG DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update && apt install -y \
-    git \
-    python3.8 \
+    ansible \
     build-essential \
-    ninja-build \
     cmake \
-    pkg-config \
+    git \
+    gzip \
     libglib2.0-dev \
     libpixman-1-dev \
+    ninja-build \
+    pkg-config \
+    python3.8 \
  && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 \
- && git clone --single-branch --branch \
-    $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/ \
+
+ # Build and install Qemu from source
+ && git clone --single-branch --branch $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/ \
  && mkdir $BUILD_DIR/qemu/build \
- && $(cd $BUILD_DIR/qemu/build && ../configure --target-list=aarch64-softmmu) \
+ && (cd $BUILD_DIR/qemu/build && ../configure --target-list=aarch64-softmmu) \
  && make -C $BUILD_DIR/qemu/build install -j$BUILD_CORES \
  && rm -r $BUILD_DIR \
+
+ # Remove redundant build dependencies
  && apt-get remove -y \
-    git \
-    python3.8 \
     build-essential \
-    ninja-build \
     cmake \
-    pkg-config \
+    git \
     libglib2.0-dev \
-    libpixman-1-dev
+    libpixman-1-dev \
+    ninja-build \
+    pkg-config \
+    python3.8
 
-# Setup project
-COPY bin/ /project/bin/
-COPY run.sh /project/
+# Copy build files
+COPY --from=0 $BUILD_DIR/dist/ /app/
 
-WORKDIR /project/
-CMD /project/run.sh
+# Copy start script
+COPY src/start.sh /
+
+CMD ["/start.sh"]

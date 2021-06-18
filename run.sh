@@ -3,4 +3,4 @@ KERNEL_IMAGE_NAME="ptrsr/rpi-qemu-kernel"
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)/"
 DIST_DIR="$PROJECT_DIR/dist"
 
-docker run --rm -it -v $DIST_DIR:/dist -w /dist $KERNEL_IMAGE_NAME
+docker run --rm -it --network=host -v $DIST_DIR:/dist $KERNEL_IMAGE_NAME

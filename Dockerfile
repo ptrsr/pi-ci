@@ -60,7 +60,11 @@ RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/lin
  && make -C $BUILD_DIR/linux/ INSTALL_MOD_PATH=/mnt/root modules_install \
  && rm -r $BUILD_DIR/linux/
 
+# Use custom fstab
 COPY src/fstab /mnt/root/etc/
+
+# Enable ssh server on startup
+RUN touch /mnt/boot/ssh
 
 # Create sparse image from modified configuration and copy all build files to distribution folder
 RUN mkdir $BUILD_DIR/dist \ 

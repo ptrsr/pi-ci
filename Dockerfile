@@ -78,16 +78,20 @@ RUN mkdir $BUILD_DIR/dist \
 
 CMD cp $BUILD_DIR/dist ./
 
-# # ---------------------------
+# ---------------------------
 FROM ubuntu:20.04 as emulator
 
 # Project build directory
 ARG BUILD_DIR=/build/
+ARG BUILD_CORES=2
 
 ARG QEMU_GIT=https://github.com/qemu/qemu.git
 ARG QEMU_BRANCH=v5.2.0
 
-ARG BUILD_CORES=2
+ARG RETRY_SCRIPT=https://raw.githubusercontent.com/kadwanev/retry/master/retry
+
+# Copy build files
+COPY --from=0 $BUILD_DIR/dist/ /app/
 
 # Install packages and build essentials
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -95,6 +99,7 @@ RUN apt-get update && apt install -y \
     ansible \
     build-essential \
     cmake \
+    curl \
     git \
     gzip \
     libglib2.0-dev \
@@ -102,7 +107,12 @@ RUN apt-get update && apt install -y \
     ninja-build \
     pkg-config \
     python3.8 \
+    ssh \
+    sshpass \
  && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 \
+
+ # Install retry script
+ && curl $RETRY_SCRIPT -o /usr/local/bin/retry && chmod +x /usr/local/bin/retry \
 
  # Build and install Qemu from source
  && git clone --single-branch --branch $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/ \
@@ -111,19 +121,44 @@ RUN apt-get update && apt install -y \
  && make -C $BUILD_DIR/qemu/build install -j$BUILD_CORES \
  && rm -r $BUILD_DIR \
 
+ # Unzip distro image 
+ && gunzip /app/distro.qcow2.gz \
+
+ # Start distro as daemon
+ && qemu-system-aarch64 \
+   -M raspi3 \
+   -m 1G \
+   -smp 4 \
+   -kernel /app/kernel8.img \
+   -dtb /app/pi3.dtb \
+   -sd /app/distro.qcow2 \
+   -daemonize -no-reboot \
+   -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+   -append "rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether" \
+ # Update system and install ansible 
+ && retry 'sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "echo \"Machine ready\""' \
+ && sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "\
+    sudo apt-get update;\
+    sudo apt-get install -y ansible;\
+    sudo shutdown now;\
+    " || true \
  # Remove redundant build dependencies
  && apt-get remove -y \
     build-essential \
     cmake \
+    curl \
     git \
     libglib2.0-dev \
     libpixman-1-dev \
     ninja-build \
     pkg-config \
-    python3.8
-
-# Copy build files
-COPY --from=0 $BUILD_DIR/dist/ /app/
+    sshpass \
+ # Stop the virtual machine
+ && sleep 20 \
+ && kill -15 $(pidof qemu-system-aarch64) \
+ && sleep 10 \
+# Finally compress the distro image
+ && gzip /app/distro.qcow2
 
 # Copy start script
 COPY src/start.sh /

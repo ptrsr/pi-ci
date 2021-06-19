@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir -p /dist
+
 set -o noclobber
 (gunzip -c /app/distro.qcow2.gz > /dist/distro.qcow2) 2> /dev/null
 

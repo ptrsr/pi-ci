@@ -1,0 +1,9 @@
+---
+# # Start raspi vm machine
+- import_playbook: host/start.yml
+
+# # Execute tasks on raspi
+- import_playbook: raspi/test.yml
+
+# Stop raspi vm machine
+- import_playbook: host/stop.yml

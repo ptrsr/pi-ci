@@ -96,7 +96,6 @@ COPY --from=0 $BUILD_DIR/dist/ /app/
 # Install packages and build essentials
 ARG DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update && apt install -y \
-    ansible \
     build-essential \
     cmake \
     curl \
@@ -110,20 +109,16 @@ RUN apt-get update && apt install -y \
     ssh \
     sshpass \
  && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 \
-
  # Install retry script
  && curl $RETRY_SCRIPT -o /usr/local/bin/retry && chmod +x /usr/local/bin/retry \
-
  # Build and install Qemu from source
  && git clone --single-branch --branch $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/ \
  && mkdir $BUILD_DIR/qemu/build \
  && (cd $BUILD_DIR/qemu/build && ../configure --target-list=aarch64-softmmu) \
  && make -C $BUILD_DIR/qemu/build install -j$BUILD_CORES \
  && rm -r $BUILD_DIR \
-
  # Unzip distro image 
  && gunzip /app/distro.qcow2.gz \
-
  # Start distro as daemon
  && qemu-system-aarch64 \
    -M raspi3 \
@@ -152,12 +147,13 @@ RUN apt-get update && apt install -y \
     libpixman-1-dev \
     ninja-build \
     pkg-config \
+    python3.8 \
     sshpass \
  # Stop the virtual machine
  && sleep 20 \
  && kill -15 $(pidof qemu-system-aarch64) \
  && sleep 10 \
-# Finally compress the distro image
+ # Compress distro image
  && gzip /app/distro.qcow2
 
 # Copy start script

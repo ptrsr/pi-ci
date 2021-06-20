@@ -1,0 +1,7 @@
+---
+# Print debug message in raspi machine
+- hosts: raspi
+  tasks:
+  - name: Print debug message
+    debug:
+      msg: Hello, world!

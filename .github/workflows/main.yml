@@ -2,7 +2,7 @@ name: Build RPI kernel
 on: [push]
 
 jobs:
-  compile-kernel:
+  build:
     runs-on: ubuntu-20.04
     env:
       IMAGE_NAME: ptrsr/pi-kernel
@@ -19,34 +19,69 @@ jobs:
       
       - # Setup cache using a hash
         name: Cache register
+        id: cache
         uses: actions/cache@v2
         with:
-          path: /tmp/.buildx-cache
-          key: buildx
+          path: /tmp/image.tar
+          key: ${{ hashFiles('dockerfile') }}
 
+        # --cache-from=type=local,src=/tmp/.buildx-cache \
+        # --cache-to=type=local,dest=/tmp/.buildx-cache-new \
       - # Build distro image, kernel and device tree blob using Docker buildx
         name: Build docker image
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           docker buildx build \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache-new \
-            --output type=docker \
-            -t $IMAGE_NAME .
+            -t $IMAGE_NAME \
+            -o type=docker,dest=- \
+            . > /tmp/image.tar
 
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      # - # Copy kernel files
+      #   name: Copy kernel files
+      #   run: |
+      #     docker run \
+      #       -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
+      #       -w $GITHUB_WORKSPACE \
+      #       $IMAGE_NAME
 
-      - # Copy kernel files
-        name: Copy kernel files
-        run: |
-          docker run \
-            -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
-            -w $GITHUB_WORKSPACE \
-            $IMAGE_NAME
+      # - # Upload kernel artifacts
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: pi
+      #     path: |
+      #       $GITHUB_WORKSPACE/dist/
+      # - name: Log in to Docker Hub
+      #   uses: docker/login-action@v1
+      #   with:
+      #     username: ${{ secrets.DOCKER_USERNAME }}
+      #     password: ${{ secrets.DOCKER_PASSWORD }}
+      # - name: Push to Docker Hub
+      #   uses: docker/build-push-action@v2
+      #   with:
+      #     push: true
+      #     tags: my-docker-hub-namespace/my-docker-hub-repository:latest
 
-      - # Upload kernel artifacts
-        uses: actions/upload-artifact@v2
+  test:
+    needs: build
+    runs-on: ubuntu-20.04
+    env:
+      IMAGE_NAME: ptrsr/pi-kernel
+
+    steps:
+      - # Check out project
+        name: Checkout
+        uses: actions/checkout@v2
+
+      - # Setup cache using a hash
+        name: Cache register
+        id: cache
+        uses: actions/cache@v2
         with:
-          name: pi
-          path: |
-            $GITHUB_WORKSPACE/dist/
+          path: /tmp/image.tar
+          key: ${{ hashFiles('dockerfile') }}
+
+      - # Setup cache using a hash
+        name: Cache register
+        run: docker load -i /tmp/image.tar
+
+

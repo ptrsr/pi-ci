@@ -28,14 +28,18 @@ jobs:
         # --cache-from=type=local,src=/tmp/.buildx-cache \
         # --cache-to=type=local,dest=/tmp/.buildx-cache-new \
       - # Build distro image, kernel and device tree blob using Docker buildx
-        name: Build docker image
+        name: Build Docker image
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           docker buildx build \
             -t $IMAGE_NAME \
             -o type=docker,dest=- \
             . > /tmp/image.tar
-
+      
+      - # Load image
+        name: Load Docker image
+        run: |
+          ls -l --block-size=M /tmp/
       # - # Copy kernel files
       #   name: Copy kernel files
       #   run: |
@@ -80,8 +84,8 @@ jobs:
           path: /tmp/image.tar
           key: ${{ hashFiles('dockerfile') }}
 
-      - # Setup cache using a hash
-        name: Cache register
+      - # Load image
+        name: Load Docker image
         run: docker load -i /tmp/image.tar
 
 

@@ -2,15 +2,16 @@
 # This playbook prints a simple debug message
 - hosts: local
   connection: local
+  gather_facts: no
   tasks:
   - name: Start raspi machine
     docker_container:
       name: raspi
-      image: ptrsr/rpi-qemu-kernel
+      image: ptrsr/pi-kernel
       state: started
       network_mode: host
-      # images:
-      #   - '../dist:/dist'
+      volumes:
+        - '{{ main_dir }}/../dist:/dist' 
 
 # Check machine connection
 - hosts: raspi
@@ -18,4 +19,4 @@
   tasks:
   - name: Wait for machine startup
     wait_for_connection:
-      timeout: 100
+      timeout: 300

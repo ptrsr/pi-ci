@@ -1,4 +1,11 @@
 ---
+- hosts: local
+  connection: local
+  gather_facts: no
+  tasks:
+  - set_fact:
+      main_dir: "{{ playbook_dir }}"
+
 # # Start raspi vm machine
 - import_playbook: host/start.yml
 

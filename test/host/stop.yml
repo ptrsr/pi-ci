@@ -1,6 +1,7 @@
 ---
 - hosts: raspi
-  any_errors_fatal: false
+  # any_errors_fatal: false
+  gather_facts: no
   tasks:
   - name: Shutdown vm
     shell: shutdown now
@@ -10,10 +11,11 @@
 
 - hosts: local
   connection: local
+  gather_facts: no
   tasks:
   - name: Wait for shutdown
     pause:
-      seconds: 5
+      seconds: 10
     
   - name: Stop raspi container
     docker_container:

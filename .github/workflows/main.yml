@@ -6,86 +6,84 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       IMAGE_NAME: ptrsr/pi-kernel
-
     steps:
-      - # Check out project
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
 
-      - # Use the buildx runner for caching layers
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
       
-      - # Setup cache using a hash
-        name: Cache register
+      - name: Cache register
         id: cache
         uses: actions/cache@v2
         with:
           path: /tmp/image.tar
           key: ${{ hashFiles('dockerfile') }}
 
-        # --cache-from=type=local,src=/tmp/.buildx-cache \
-        # --cache-to=type=local,dest=/tmp/.buildx-cache-new \
-      - # Build distro image, kernel and device tree blob using Docker buildx
-        name: Build Docker image
+      - name: Build Docker image
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           docker buildx build \
             -t $IMAGE_NAME \
             -o type=docker,dest=- \
             . > /tmp/image.tar
-      
-      - # Load image
-        name: Load Docker image
-        run: |
-          ls -l --block-size=M /tmp/
-      # - # Copy kernel files
-      #   name: Copy kernel files
-      #   run: |
-      #     docker run \
-      #       -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
-      #       -w $GITHUB_WORKSPACE \
-      #       $IMAGE_NAME
-
-      # - # Upload kernel artifacts
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: pi
-      #     path: |
-      #       $GITHUB_WORKSPACE/dist/
-      # - name: Log in to Docker Hub
-      #   uses: docker/login-action@v1
-      #   with:
-      #     username: ${{ secrets.DOCKER_USERNAME }}
-      #     password: ${{ secrets.DOCKER_PASSWORD }}
-      # - name: Push to Docker Hub
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     push: true
-      #     tags: my-docker-hub-namespace/my-docker-hub-repository:latest
 
   test:
     needs: build
     runs-on: ubuntu-20.04
-    env:
-      IMAGE_NAME: ptrsr/pi-kernel
-
     steps:
-      - # Check out project
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
 
-      - # Setup cache using a hash
-        name: Cache register
+      - name: Cache register
         id: cache
         uses: actions/cache@v2
         with:
           path: /tmp/image.tar
           key: ${{ hashFiles('dockerfile') }}
 
-      - # Load image
-        name: Load Docker image
+      - name: Load Docker image
         run: docker load -i /tmp/image.tar
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get install ansible
+          pip3 install docker-py
 
+      - name: Test run project
+        run: |
+          ansible-playbook \
+          -i test/hosts.yml \
+          test/main.yml
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: config
+          path: dist
+
+  distribute:
+    needs: test
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Cache register
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/image.tar
+          key: ${{ hashFiles('dockerfile') }}
+
+      - name: Load Docker image
+        run: docker load -i /tmp/image.tar
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push to Docker Hub
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          tags: my-docker-hub-namespace/my-docker-hub-repository:latest

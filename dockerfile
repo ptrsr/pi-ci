@@ -130,7 +130,7 @@ RUN apt-get update && apt install -y \
    -daemonize -no-reboot \
    -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::2222-:22 \
    -append "rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether" \
- # Update system and install ansible 
+ # Update system and install ansible
  && retry 'sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "echo \"Machine ready\""' \
  && sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "\
     sudo apt-get update;\

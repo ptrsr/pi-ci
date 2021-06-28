@@ -4,67 +4,67 @@ env:
   IMAGE_NAME: ptrsr/pi-ci
 
 jobs:
-  # build:
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Cache register
-  #       id: cache
-  #       uses: actions/cache@v2
-  #       with:
-  #         path: /tmp/image.tar
-  #         key: ${{ hashFiles('dockerfile') }}
+      - name: Cache register
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/image.tar
+          key: ${{ hashFiles('dockerfile') }}
 
-  #     - name: Set up Docker Buildx
-  #       id: buildx
-  #       uses: docker/setup-buildx-action@v1
-  #       if: steps.cache.outputs.cache-hit != 'true'
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        if: steps.cache.outputs.cache-hit != 'true'
       
-  #     - name: Build Docker image
-  #       if: steps.cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         docker buildx build \
-  #           -t ptrsr/pi-ci \
-  #           -o type=docker,dest=- \
-  #           . > /tmp/image.tar
+      - name: Build Docker image
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          docker buildx build \
+            -t ptrsr/pi-ci \
+            -o type=docker,dest=- \
+            . > /tmp/image.tar
 
-  # test:
-  #   needs: build
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+  test:
+    needs: build
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Cache register
-  #       id: cache
-  #       uses: actions/cache@v2
-  #       with:
-  #         path: /tmp/image.tar
-  #         key: ${{ hashFiles('dockerfile') }}
+      - name: Cache register
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/image.tar
+          key: ${{ hashFiles('dockerfile') }}
 
-  #     - name: Load Docker image
-  #       run: docker load -i /tmp/image.tar
+      - name: Load Docker image
+        run: docker load -i /tmp/image.tar
 
-  #     - name: Install dependencies
-  #       run: |
-  #         sudo apt-get install ansible
-  #         pip3 install docker-py
+      - name: Install dependencies
+        run: |
+          sudo apt-get install ansible
+          pip3 install docker-py
 
-  #     - name: Test run project
-  #       run: |
-  #         ansible-playbook \
-  #         -i test/hosts.yml \
-  #         test/main.yml
+      - name: Test run project
+        run: |
+          ansible-playbook \
+          -i test/hosts.yml \
+          test/main.yml
 
-  #     - uses: actions/upload-artifact@v2
-  #       with:
-  #         name: config
-  #         path: dist
+      - uses: actions/upload-artifact@v2
+        with:
+          name: config
+          path: dist
 
   distribute:
-    # needs: test
+    needs: test
     runs-on: ubuntu-20.04
     environment: docker-hub
     steps:

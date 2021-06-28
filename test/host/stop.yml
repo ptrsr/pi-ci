@@ -1,6 +1,5 @@
 ---
 - hosts: raspi
-  # any_errors_fatal: false
   gather_facts: no
   tasks:
   - name: Shutdown vm

@@ -5,11 +5,12 @@
   tasks:
   - set_fact:
       main_dir: "{{ playbook_dir }}"
+      dist_dir: "{{ playbook_dir }}/../dist"
 
 # # Start raspi vm machine
 - import_playbook: host/start.yml
 
-# # Execute tasks on raspi
+# # Execute test on raspi
 - import_playbook: raspi/test.yml
 
 # Stop raspi vm machine

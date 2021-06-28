@@ -1,5 +1,4 @@
 ---
-# This playbook prints a simple debug message
 - hosts: local
   connection: local
   gather_facts: no
@@ -7,13 +6,12 @@
   - name: Start raspi machine
     docker_container:
       name: raspi
-      image: ptrsr/pi-kernel
+      image: ptrsr/pi-ci
       state: started
       network_mode: host
       volumes:
-        - '{{ main_dir }}/../dist:/dist' 
+        - "{{ dist_dir|default(omit) }}:/dist"
 
-# Check machine connection
 - hosts: raspi
   gather_facts: no
   tasks:

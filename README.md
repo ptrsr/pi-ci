@@ -1,11 +1,13 @@
 # PI-CI
+[![PI-CI](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml)
+
 A [Docker image](https://hub.docker.com/repository/docker/ptrsr/pi-ci) for creating reproducible Raspberry Pi configurations using a virtual machine.
 
 ## Overview
 The PI-CI project allows developers to easily prepare Raspberry Pi images on their computer or in the cloud. It provides a complete virtual machine in a docker container, which can be ran manually or automatically using Ansible. Some key features are:
 
 - Pi 3 and 4 support
-- 64 bit Raspbian OS
+- 64 bit (ARMv8) Raspbian OS
 - Internet access
 - No root required
 - Ansible preinstalled

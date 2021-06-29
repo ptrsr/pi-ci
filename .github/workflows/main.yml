@@ -1,4 +1,4 @@
-name: Build RPI kernel
+name: PI-CI
 on: [push]
 env:
   IMAGE_NAME: ptrsr/pi-ci
@@ -52,7 +52,7 @@ jobs:
           sudo apt-get install ansible
           pip3 install docker-py
 
-      - name: Test run project
+      - name: Run test
         run: |
           ansible-playbook \
           -i test/hosts.yml \
@@ -63,7 +63,7 @@ jobs:
           name: config
           path: dist
 
-  distribute:
+  publish:
     needs: test
     runs-on: ubuntu-20.04
     environment: docker-hub

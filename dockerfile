@@ -15,7 +15,7 @@ ARG DISTRO_IMG=https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspi
 ARG KERNEL=kernel8
 ARG ARCH=arm64
 ARG CROSS_COMPILE=aarch64-linux-gnu-
-ARG CORES=2
+ARG BUILD_CORES=3
 
 # Install dependencies
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -49,19 +49,18 @@ RUN wget -nv -O $BUILD_DIR/$DISTRO_FILE.zip $DISTRO_IMG \
 # Clone the kernel source repo, build and copy the files to the distro
 RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/ \
  && cp $BUILD_DIR/.config $BUILD_DIR/linux/ \
- && make -C $BUILD_DIR/linux/ -j$CORES Image modules dtbs \
- && rm -r /mnt/root/lib/modules/* \
- && rm /mnt/boot/*.dtb \
- && rm /mnt/boot/overlays/* \
- && rm /mnt/boot/kernel8.img \
- && cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
+ && make -C $BUILD_DIR/linux/ -j$BUILD_CORES Image modules dtbs
+
+RUN cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
  && cp $BUILD_DIR/linux/arch/arm64/boot/dts/broadcom/*.dtb /mnt/boot/ \
  && cp $BUILD_DIR/linux/arch/arm64/boot/dts/overlays/*.dtb* /mnt/boot/overlays/ \
+ && cp $BUILD_DIR/linux/arch/arm64/boot/dts/overlays/README /mnt/boot/overlays/ \
  && make -C $BUILD_DIR/linux/ INSTALL_MOD_PATH=/mnt/root modules_install \
  && rm -r $BUILD_DIR/linux/
 
 # Use custom fstab
 COPY src/fstab /mnt/root/etc/
+COPY src/cmdline.txt /mnt/boot/
 
 # Enable ssh server on startup
 RUN touch /mnt/boot/ssh
@@ -70,6 +69,7 @@ RUN touch /mnt/boot/ssh
 RUN mkdir $BUILD_DIR/dist \ 
  && guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
  && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
+ && sfdisk --part-type $BUILD_DIR/distro.img 1 c \
  && qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/dist/distro.qcow2 \
  && gzip $BUILD_DIR/dist/distro.qcow2 \
  && rm $BUILD_DIR/distro.img \
@@ -86,7 +86,7 @@ ARG BUILD_DIR=/build/
 ARG BUILD_CORES=2
 
 ARG QEMU_GIT=https://github.com/qemu/qemu.git
-ARG QEMU_BRANCH=v5.2.0
+ARG QEMU_BRANCH=v6.1.0-rc0
 
 ARG RETRY_SCRIPT=https://raw.githubusercontent.com/kadwanev/retry/master/retry
 
@@ -120,23 +120,23 @@ RUN apt-get update && apt install -y \
  # Unzip distro image 
  && gunzip /app/distro.qcow2.gz \
  # Start distro as daemon
- && qemu-system-aarch64 \
-   -M raspi3 \
-   -m 1G \
-   -smp 4 \
-   -kernel /app/kernel8.img \
-   -dtb /app/pi3.dtb \
-   -sd /app/distro.qcow2 \
-   -daemonize -no-reboot \
-   -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-   -append "rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether" \
- # Update system and install ansible
- && retry 'sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "echo \"Machine ready\""' \
- && sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "\
-    sudo apt-get update;\
-    sudo apt-get install -y ansible;\
-    sudo shutdown now;\
-    " || true \
+#  && qemu-system-aarch64 \
+#    -M raspi3 \
+#    -m 1G \
+#    -smp 4 \
+#    -kernel /app/kernel8.img \
+#    -dtb /app/pi3.dtb \
+#    -sd /app/distro.qcow2 \
+#    -daemonize -no-reboot \
+#    -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+#    -append "rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether" \
+#  # Update system and install ansible
+#  && retry 'sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "echo \"Machine ready\""' \
+#  && sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "\
+#     sudo apt-get update;\
+#     sudo apt-get install -y ansible;\
+#     sudo shutdown now;\
+#     " || true \
  # Remove redundant build dependencies
  && apt-get remove -y \
     build-essential \
@@ -149,14 +149,10 @@ RUN apt-get update && apt install -y \
     pkg-config \
     python3.8 \
     sshpass \
- # Stop the virtual machine
- && sleep 20 \
- && kill -15 $(pidof qemu-system-aarch64) \
- && sleep 10 \
  # Compress distro image
  && gzip /app/distro.qcow2
 
 # Copy start script
-COPY src/start.sh /
+COPY src/main /main
 
-CMD ["/start.sh"]
+ENTRYPOINT ["/main/run.py"]

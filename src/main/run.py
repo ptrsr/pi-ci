@@ -4,7 +4,6 @@
 import sys
 import os
 import argparse
-import gzip
 import shutil
 import socket
 import subprocess
@@ -27,13 +26,18 @@ description = "PI-CI: the reproducible PI emulator."
 epilog = "Refer to https://github.com/ptrsr/pi-ci for the full README on how to use this program."
 usage = "docker run [docker args] ptrsr/pi-ci [optional args] [command]"
 
+
 # Define command line arguments
 parser = argparse.ArgumentParser(description=description, add_help=False, epilog=epilog, usage=usage, formatter_class=argparse.RawDescriptionHelpFormatter)
-parser.add_argument('command', nargs='?', help="[start, status, flash, backup]")
-parser.add_argument('-n', dest='port', type=int, help="port number", default=8000)
+parser.add_argument('command', nargs='?', help="[start, status, resize, flash, backup]")
+parser.add_argument('-n', dest='port', type=int, help="port number (default: 8000)", default=8000)
+parser.add_argument('-s', dest='storage_dev', type=str, help="storage device (default: /dev/mmcblk0)", default='/dev/mmcblk0')
+parser.add_argument('-d', dest='dist_path', type=str, help="storage path (default: /dist)", default='/dist')
+parser.add_argument('-y', dest='confirm', action='store_false', help="skip confirmation", default=True)
 parser.add_argument('-v', dest='verbose', action='store_true', help="verbose output", default=False)
 
 args = Options(vars(parser.parse_args(sys.argv[1:])))
+
 
 # Print help message
 if args.command == None:
@@ -45,14 +49,21 @@ if args.verbose:
 else:
     log.setLevel(level=logging.INFO)
 
+
 # Checks
-has_volume = os.path.isdir('/dist')
-has_image = os.path.exists('/dist/distro.qcow2')
-has_storage = os.path.exists('/dev/mmcblk0')
+image_path = f'{args.dist_path}/distro.qcow2'
+dtb_path = '/app/pi3.dtb'
+kernel_path = '/app/kernel8.img'
+
+has_volume = os.path.isdir(args.dist_path)
+has_image = os.path.exists(image_path)
+has_storage = os.path.exists(args.storage_dev)
+
+
 # Status
 if args.command == 'status':
   def print_status(title, message):
-    print(f"[{title}]: {message}")
+    print(f"[{title}] {message}")
 
   try:
     socket.create_connection(("1.1.1.1", 53))
@@ -66,7 +77,7 @@ if args.command == 'status':
     if has_image:
       print_status("PERSISTENCE", "Yes, image found")
     else:
-      print_status("PERSISTENCE", "yes, image will be created on start")
+      print_status("PERSISTENCE", "Yes, image will be created on start")
   
   if has_storage:
     print_status("STORAGE", "Yes, storage found")
@@ -75,58 +86,68 @@ if args.command == 'status':
 
   exit(0)
 
+
 # Start
 if args.command == 'start':
-  image_path = '/dist/distro.qcow2' if has_volume else '/tmp/distro.qcow2'
-
-  if not has_image:
-    log.info("No previous image found, creating a new one...")
-    with gzip.open('/app/distro.qcow2.gz', 'rb') as f_in:
-      with open(image_path, 'wb') as f_out:
-          shutil.copyfileobj(f_in, f_out)
-
   if has_volume:
-    log.info("No kernel found, using default one...")
-    if not os.path.exists('/dist/kernel8.img'):
-      shutil.copyfile('/app/kernel8.img', '/dist/kernel8.img')
+    if not has_image:
+      log.info("No previous image found, creating a new one ...")
+      shutil.copyfile('/app/distro.qcow2', image_path)
+    else:
+      log.debug("Using existing image ...")
+  else:
+    image_path = '/app/distro.qcow2'
 
-    if not os.path.exists('/dist/pi3.dtb'):
-      log.info("No device tree blob found, using default one...")
-      shutil.copyfile('/app/pi3.dtb', '/dist/pi3.dtb')
+  # TODO: copy kernel / dtb to persistence?
 
-  log.info("Starting the emulator...")
-  # Run Qemu and attach shell
-  subprocess.Popen("""
+  log.info("Starting the emulator ...")
+  subprocess.Popen(f"""
     qemu-system-aarch64 \
     -M raspi3 \
     -m 1G \
     -smp 4 \
-    -kernel /dist/kernel8.img \
-    -dtb /dist/pi3.dtb \
-    -sd /dist/distro.qcow2 \
+    -kernel {kernel_path} \
+    -dtb {dtb_path} \
+    -sd {image_path} \
     -nographic -no-reboot \
     -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::2222-:22 \
     -append \"rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether\"
   """, shell=True).wait()
+  exit(0)
+
+
+if args.command == 'resize':
+  run('qemu-img resize /dist/distro.qcow2 4G')
+  exit(0)
+
+
+if args.command == 'flash':
+  if not has_image:
+    log.error("No image found!")
+    exit(1)
+
+  if args.confirm:  
+    if not confirm("Flashing will overide any data on the storage device. Continue?", None):
+      exit(0)
+
+  log.info("Converting image ...")
+  run('qemu-img convert -p -f qcow2 -O raw /dist/distro.qcow2 /tmp/distro.img')
+  log.info("Flashing image to drive ...")
+  run('dd bs=4M if=/tmp/distro.img of=/dev/mmcblk0 status=progress')
+  exit(0)
+
 
 if args.command == 'backup':
   if has_image:
     if not confirm("An image already exists in the dist folder. Do you want to overwrite?", default='no'):
       print("Please move the distro.img file in the dist folder.")
       exit(0)
+    else:
+      log.inf("Removing old image ...")
+      os.remove(image_path)
     
-  log.info("Copying image from drive...")
-  run('dd bs=4M if=/dev/mmcblk0 of=/tmp/distro.img status=progress')
-  log.info("Converting image...")
+  log.info("Copying image from drive ...")
+  run('dd conv=sparse bs=4M if=/dev/mmcblk0 of=/tmp/distro.img status=progress')
+  log.info("Converting image ...")
   run('qemu-img convert -p -f raw -O qcow2 /tmp/distro.img /dist/distro.qcow2')
-
-if args.command == 'flash':
-  if not has_image:
-    log.error("No image found!")
-    exit(0)
-
-  log.info("Converting image...")
-  run('qemu-img convert -p -f qcow2 -O raw /dist/distro.qcow2 /tmp/distro.img')
-  log.info("Flashing image to drive...")
-  run('dd bs=4M if=/tmp/distro.img of=/dev/mmcblk0 status=progress')
-
+  exit(0)

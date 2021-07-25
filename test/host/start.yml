@@ -7,6 +7,7 @@
     docker_container:
       name: raspi
       image: ptrsr/pi-ci
+      command: start
       state: started
       network_mode: host
       tls_hostname: localhost

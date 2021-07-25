@@ -1,13 +1,24 @@
 # PI-CI
 [![PI-CI](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml)
-
-A Raspberry Pi emulator in a [Docker image](https://hub.docker.com/repository/docker/ptrsr/pi-ci), useful for preparing configurations manually or automatically using Ansible.
+A raspberry Pi emulator in a [Docker image](https://hub.docker.com/repository/docker/ptrsr/pi-ci) that lets developers easily prepare and flash Pi images.
 
 ## Overview
-The PI-CI project allows developers to easily prepare Raspberry Pi images on their computer or in the cloud. It provides a complete virtual machine in a docker container, which can be ran manually or automatically using Ansible. Some key features are:
+The PI-CI project enables developers to easily:
+- Run a Raspberry Pi VM.
+- Prepare a Raspberry Pi configuration inside the VM.
+- Flash the configuration to an SD card.
 
+Example use cases:
+- Preconfigure Raspberry Pi servers that work from first boot.
+- Create reproducible server configurations using Ansible.
+- Automate the distribution of configurations through a CI pipeline.
+- Test ARM applications in a virtualized environment.
+- Safely test backups without a second SD card.
+
+Key features:
 - Pi 3 and 4 support
-- 64 bit (ARMv8) Raspbian OS
+- 64 bit (ARMv8) Raspbian OS included
+- Support for 32 bit ARMv7l distro's
 - Internet access
 - No root required
 - Ansible preinstalled
@@ -16,26 +27,64 @@ The PI-CI project allows developers to easily prepare Raspberry Pi images on the
 - Tested and stable
 
 ## Usage
-### Manual
-Simply pull the image and run a docker container for a simple test run:
 ```sh
-docker pull ptrsr/pi-ci
-docker run --rm -it ptrsr/pi-ci
+$ docker pull ptrsr/pi-ci
+$ docker run --rm -it ptrsr/pi-ci
+
+> usage: docker run [docker args] ptrsr/pi-ci [optional args] [command]
+> 
+> PI-CI: the reproducible PI emulator.
+> 
+> positional arguments:
+>   command         [start, status, resize, flash, backup]
+> 
+> optional arguments:
+>   -n PORT         port number (default: 8000)
+>   -s STORAGE_DEV  storage device (default: /dev/mmcblk0)
+>   -d DIST_PATH    storage path (default: /dist)
+>   -y              skip confirmation
+>   -v              verbose output
+> 
+> Refer to https://github.com/ptrsr/pi-ci for the full README on how to use this program.
+```
+
+### Start machine
+Simply run a `ptrsr/pi-ci` container with the start command:
+```sh
+docker run --rm -it ptrsr/pi-ci start
 ```
 Login using the default Raspbian credentials:
 | Username | Password  | 
 | -------- | --------- |
 | pi       | raspberry | 
 
-To enable internet access, run the image with the **host** network mode.
-To make the configuration persistent, use a bind mount to `/dist`.
-Complete example:
+### Persistence
+To save the resulting image, use a bind mount to `/dist`:
 ```sh
-docker run --rm -it --network=host -v $(realpath .)/dist:/dist ptrsr/pi-ci
+docker run --rm -it -v $(realpath .)/dist:/dist ptrsr/pi-ci start
 ```
 **NOTE**: this example will create and mount the `dist` folder in the current working directory of the host.
 
-### Automatic
+To restart the image, simply use the same bind mount.
+
+### SSH access
+To enable ssh access, run the image with the **host** network mode.
+```sh
+docker run --rm --network=host ptrsr/pi-ci start
+```
+
+Then ssh into the virtual Pi:
+```sh
+ssh pi@localhost -p 2222
+```
+
+### Flash 
+To flash the prepared image to a storage device (such as an SD card), provide the container with the device and run the flash command:
+```
+docker run --rm -it -v $(realpath .):/dist --device=/dev/mmcblk0 ptrsr/pi-ci flash
+```
+
+## Automation
 Using Ansible, it is possible to automate the whole configuration process. Ansible requires docker-py to be installed. This can be done using `pip3 install docker-py'.
 
 Ansible can take care of:
@@ -49,8 +98,8 @@ ansible-playbook -i ./test/hosts.yml ./test/main.yml
 ```
 
 ## Tips
+- Do not stop or kill the Docker container while the VM is running, this **WILL** corrupt the image!
 - Make sure to regularly back up the `distro.qcow2` image.
-- Do not stop or kill the Docker container while the VM is running, as this corrupts the image!
 
 ## Versions
 PI-CI should work on Ubuntu 18.04. It has automatically been tested on Ubuntu 20.04 using GitHub Actions. Any other distro should work with the following software versions (or higher, perhaps):

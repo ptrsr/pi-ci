@@ -1,3 +1,4 @@
+# PI-CI v0.2
 FROM ubuntu:20.04 as builder
 
 # Project build directory
@@ -15,7 +16,6 @@ ARG DISTRO_IMG=https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspi
 ARG KERNEL=kernel8
 ARG ARCH=arm64
 ARG CROSS_COMPILE=aarch64-linux-gnu-
-ARG BUILD_CORES=3
 
 # Install dependencies
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -45,7 +45,7 @@ RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/lin
 # Copy build configuration
 COPY src/.config $BUILD_DIR/linux/
 # Build kernel, modules and device tree blobs
-RUN make -C $BUILD_DIR/linux/ -j$BUILD_CORES Image modules dtbs
+RUN make -C $BUILD_DIR/linux/ -j$(nproc) Image modules dtbs
 
 # Copy kernel, modules and device tree blobs to extracted distro
 RUN cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
@@ -67,7 +67,6 @@ RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
 # Convert new distro image to sparse file
 RUN qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2
 
-# Copy distro to current working directory for debugging
 CMD cp $BUILD_DIR/distro.qcow2 ./
 
 
@@ -101,6 +100,7 @@ RUN apt-get update && apt install -y \
     ninja-build \
     pkg-config \
     python3.8 \
+    python3-pip \
     ssh \
     sshpass
 
@@ -114,7 +114,7 @@ RUN curl $RETRY_SCRIPT -o /usr/local/bin/retry && chmod +x /usr/local/bin/retry
 RUN git clone --single-branch --branch $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/ \
  && mkdir $BUILD_DIR/qemu/build \
  && (cd $BUILD_DIR/qemu/build && ../configure --target-list=aarch64-softmmu) \
- && make -C $BUILD_DIR/qemu/build install -j$BUILD_CORES \
+ && make -C $BUILD_DIR/qemu/build install -j$(nproc) \
  && rm -r $BUILD_DIR
  
 # Update system and install Ansible
@@ -136,20 +136,23 @@ RUN qemu-system-aarch64 \
     " || true \
  && sleep 10
 
+copy src/main/requirements.txt /main/requirements.txt
+
+# Install Python requirements for helper scripts
+RUN pip3 install -r /main/requirements.txt
+
 # Remove redundant build dependencies
-RUN apt-get remove -y \
+RUN apt-get purge --auto-remove -y \
     build-essential \
     cmake \
     curl \
     git \
     libglib2.0-dev \
-    libpixman-1-dev \
     ninja-build \
     pkg-config \
-    python3.8 \
     sshpass
 
-# Copy start script
+# Copy helper scripts
 COPY src/main /main
 
 # Helper script on running container

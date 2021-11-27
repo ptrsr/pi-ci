@@ -2,8 +2,6 @@ import os
 from distutils.util import strtobool
 from argparse import Namespace
 
-import dotenv
-
 
 def get_var(env_var: str):
     try:
@@ -13,6 +11,5 @@ def get_var(env_var: str):
 
 
 # Load environment variables from file
-def get_env(env_file_path: str):
-    dotenv.load_dotenv(env_file_path)
+def get_env(env_file_path=None):
     return Namespace(**{ key: get_var(value) for key, value in os.environ.items() })

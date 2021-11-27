@@ -27,5 +27,5 @@ def flash_parser(parsers, parent_parser, get_usage, env):
     description = "Command for flashing the image to an SD card"
 
     parser = parsers.add_parser('flash', description=description, parents=[parent_parser], usage=get_usage('flash'), add_help=False)
-    parser.add_argument('-s', dest='storage_path', type=str, help=f"storage device (default: {env.DEFAULT_STORAGE_PATH})", default=env.DEFAULT_STORAGE_PATH)
+    parser.add_argument('-s', dest='storage_path', type=str, help=f"storage device (default: {env.STORAGE_PATH})", default=env.STORAGE_PATH)
     parser.add_argument('-y', dest='confirm', action='store_false', help="skip confirmation", default=True)

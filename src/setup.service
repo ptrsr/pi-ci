@@ -1,0 +1,10 @@
+[Unit]
+Description=Install Ansible on first startup
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/setup.sh
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

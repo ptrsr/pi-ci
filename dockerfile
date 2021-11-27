@@ -1,8 +1,12 @@
 # PI-CI v0.2
+
+# Shared variables
+ARG BUILD_DIR=/build/
+
 FROM ubuntu:20.04 as builder
 
-# Project build directory
-ARG BUILD_DIR=/build/
+# Use shared build directory
+ARG BUILD_DIR
 
 # Kernel source
 ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
@@ -57,8 +61,15 @@ RUN cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
 # Copy boot configuration
 COPY src/fstab /mnt/root/etc/
 COPY src/cmdline.txt /mnt/boot/
-# Enable ssh server on startup
+# Run SSH server on startup
 RUN touch /mnt/boot/ssh
+
+# Copy setup configuration
+RUN mkdir -p /mnt/root/usr/local/lib/systemd/system
+COPY src/setup.service /mnt/root/usr/local/lib/systemd/system/
+COPY src/setup.sh /mnt/root/usr/local/bin/
+RUN ln -rs /mnt/root/usr/local/lib/systemd/system/setup.service /mnt/root/etc/systemd/system/multi-user.target.wants
+RUN rm mnt/root/etc/systemd/system/timers.target.wants/apt-daily*
 
 # Create new distro image from modified boot and root
 RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
@@ -73,42 +84,42 @@ CMD cp $BUILD_DIR/distro.qcow2 ./
 # ---------------------------
 FROM ubuntu:20.04 as emulator
 
-# Project build directory
-ARG BUILD_DIR=/build/
-ARG BUILD_CORES=3
-
 ARG QEMU_GIT=https://github.com/qemu/qemu.git
 ARG QEMU_BRANCH=v6.1.0-rc0
 
-ARG RETRY_SCRIPT=https://raw.githubusercontent.com/kadwanev/retry/master/retry
+# Project build directory
+ARG BUILD_DIR
+# Folder containing default configuration files
+ENV BASE_DIR=/base/
+# Folder containing helper scripts
+ENV APP_DIR=/app/
+
+ENV IMAGE_FILE_NAME=distro.qcow2
+ENV KERNEL_FILE_NAME=kernel8.img
+ENV DTB_FILE_NAME=pi3.dtb
 
 # Copy build files
-RUN mkdir /app/
-COPY --from=0 /mnt/boot/bcm2710-rpi-3-b.dtb /app/pi3.dtb
-COPY --from=0 $BUILD_DIR/distro.qcow2 /app/
-COPY --from=0 /mnt/boot/kernel8.img /app/
+RUN mkdir $BASE_DIR
+COPY --from=0 $BUILD_DIR/distro.qcow2 $BASE_DIR/$IMAGE_FILE_NAME
+COPY --from=0 /mnt/boot/kernel8.img $BASE_DIR/$KERNEL_FILE_NAME
+COPY --from=0 /mnt/boot/bcm2710-rpi-3-b.dtb $BASE_DIR/$DTB_FILE_NAME
 
 # Install packages and build essentials
 ARG DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update && apt install -y \
     build-essential \
     cmake \
-    curl \
     git \
     libglib2.0-dev \
+    libgio-cil \
     libpixman-1-dev \
     ninja-build \
     pkg-config \
     python3.8 \
-    python3-pip \
-    ssh \
-    sshpass
+    python3-pip
 
 # Set default Python version to 3.8 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1
-
-# Install retry script
-RUN curl $RETRY_SCRIPT -o /usr/local/bin/retry && chmod +x /usr/local/bin/retry
 
 # Build and install Qemu from source
 RUN git clone --single-branch --branch $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/ \
@@ -116,44 +127,41 @@ RUN git clone --single-branch --branch $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/ \
  && (cd $BUILD_DIR/qemu/build && ../configure --target-list=aarch64-softmmu) \
  && make -C $BUILD_DIR/qemu/build install -j$(nproc) \
  && rm -r $BUILD_DIR
- 
+
 # Update system and install Ansible
 RUN qemu-system-aarch64 \
    -M raspi3 \
    -m 1G \
    -smp 4 \
-   -kernel /app/kernel8.img \
-   -dtb /app/pi3.dtb \
-   -sd /app/distro.qcow2 \
-   -daemonize -no-reboot \
-   -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-   -append "rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether" \
- && retry 'sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "echo \"Machine ready\""' \
- && sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost "\
-    sudo apt-get update;\
-    sudo apt-get install -y ansible;\
-    sudo shutdown now;\
-    " || true \
- && sleep 10
+   -sd $BASE_DIR/$IMAGE_FILE_NAME \
+   -kernel $BASE_DIR/$KERNEL_FILE_NAME \
+   -dtb $BASE_DIR/$DTB_FILE_NAME \
+   -nographic -no-reboot \
+   -device usb-net,netdev=net0 -netdev user,id=net0 \
+   -append "rw root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether" \
+   2> /dev/null
 
-copy src/main/requirements.txt /main/requirements.txt
-
-# Install Python requirements for helper scripts
-RUN pip3 install -r /main/requirements.txt
+# Copy requirements first
+COPY src/app/requirements.txt $APP_DIR/requirements.txt
+# Install Python dependencies
+RUN pip3 install -r $APP_DIR/requirements.txt
 
 # Remove redundant build dependencies
 RUN apt-get purge --auto-remove -y \
     build-essential \
     cmake \
-    curl \
     git \
     libglib2.0-dev \
     ninja-build \
-    pkg-config \
-    sshpass
+    pkg-config
 
 # Copy helper scripts
-COPY src/main /main
+COPY src/app/ $APP_DIR
 
 # Helper script on running container
-ENTRYPOINT ["/main/run.py"]
+ENTRYPOINT ["/app/run.py"]
+
+# Helper variables
+ENV DIST_DIR /dist
+ENV STORAGE_PATH /dev/mmcblk0
+ENV PORT 2222

@@ -2,7 +2,6 @@
 
 # Import system libraries
 import sys
-import os
 import argparse
 
 # Do not write pycache
@@ -16,9 +15,8 @@ from func.resize import resize_parser
 from func.flash import flash_parser
 from func.backup import backup_parser
 
-# Default environment variables from configuration file
-CONFIG_PATH = os.path.dirname(sys.argv[0]) + '/config.env'
-env = get_env(CONFIG_PATH)
+# Use environment variables (defaults given in dockerfile)
+env = get_env()
 
 # Help text
 usage = "docker run [docker args] ptrsr/pi-ci"
@@ -44,7 +42,6 @@ for enable_parser in [start_parser, resize_parser, flash_parser, backup_parser]:
 
 # Get CLI arguments
 args = parser.parse_args(sys.argv[1:])
-print(args)
 
 # Print help on missing command or help argument
 if not 'func' in args:

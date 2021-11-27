@@ -51,9 +51,9 @@ def start(opts):
     -kernel {kernel_path} \
     -dtb {dtb_path} \
     -nographic -no-reboot \
-    -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+    -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::{opts.port}-:22 \
     -append \"rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether\"
-  """, shell=True).wait()
+  """, shell=True, stderr=subprocess.DEVNULL).wait()
 
 
 # Start command parser
@@ -61,6 +61,6 @@ def start_parser(parsers, parent_parser, get_usage, env):
     description = "Command for starting the emulator"
 
     parser = parsers.add_parser("start", description=description, parents=[parent_parser], usage=get_usage('start'))
-    parser.add_argument('-p', dest='port', type=int, help="port number (default: 8000)", default=8000) # TODO: add port
+    parser.add_argument('-p', dest='port', type=int, help=f"port number (default: {env.PORT})", default=env.PORT)
 
     parser.set_defaults(func=lambda *args: start(*args))

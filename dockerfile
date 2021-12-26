@@ -69,7 +69,9 @@ RUN mkdir -p /mnt/root/usr/local/lib/systemd/system
 COPY src/setup.service /mnt/root/usr/local/lib/systemd/system/
 COPY src/setup.sh /mnt/root/usr/local/bin/
 RUN ln -rs /mnt/root/usr/local/lib/systemd/system/setup.service /mnt/root/etc/systemd/system/multi-user.target.wants
+RUN ln -rs /mnt/root/lib/systemd/system/systemd-time-wait-sync.service /mnt/root/etc/systemd/system/sysinit.target.wants/systemd-time-wait-sync.service
 RUN rm mnt/root/etc/systemd/system/timers.target.wants/apt-daily*
+RUN ln -rs /mnt/root/dev/null /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service
 
 # Create new distro image from modified boot and root
 RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
@@ -112,7 +114,9 @@ RUN apt-get update && apt install -y \
     git \
     libglib2.0-dev \
     libgio-cil \
+    libguestfs-tools \
     libpixman-1-dev \
+    linux-image-generic \
     ninja-build \
     pkg-config \
     python3.8 \
@@ -138,7 +142,7 @@ RUN qemu-system-aarch64 \
    -dtb $BASE_DIR/$DTB_FILE_NAME \
    -nographic -no-reboot \
    -device usb-net,netdev=net0 -netdev user,id=net0 \
-   -append "rw root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether" \
+   -append "rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether" \
    2> /dev/null
 
 # Copy requirements first
@@ -162,6 +166,7 @@ COPY src/app/ $APP_DIR
 ENTRYPOINT ["/app/run.py"]
 
 # Helper variables
+ENV PYTHONDONTWRITEBYTECODE 1
 ENV DIST_DIR /dist
 ENV STORAGE_PATH /dev/mmcblk0
 ENV PORT 2222

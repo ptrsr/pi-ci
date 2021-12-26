@@ -1,5 +1,8 @@
+from lib.logger import log
 
-# def backup(opts):
+def backup(opts):
+  log.error("Backup has not been implemented yet!")
+  exit(1)  
 #   if has_image:
 #     if not confirm("An image already exists in the dist folder. Do you want to overwrite?", default='no'):
 #       print("Please move the distro.img file in the dist folder.")
@@ -17,7 +20,10 @@
 
 # Start command parser
 def backup_parser(parsers, parent_parser, get_usage, env):
-    description = "command for extracting an image from an SD card"
-    
-    parser = parsers.add_parser('backup', description=description, usage=get_usage('backup'))
-    parser.add_argument('-d', dest='dist_path', type=str, help="storage path (default: /dist)", default='/dist')
+  
+  description = """command for extracting an image from an SD card
+  NOTE: not implemented yet!
+  """
+  
+  parser = parsers.add_parser('backup', description=description, usage=get_usage('backup'))
+  parser.add_argument('-d', dest='dist_path', type=str, help="storage path (default: /dist)", default='/dist')

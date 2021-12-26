@@ -112,3 +112,13 @@ PI-CI should work on Ubuntu 18.04. It has automatically been tested on Ubuntu 20
 
 ## License
 PI-CI is licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html).
+
+## NOTES
+qemu-img resize distro2.qcow2 3G
+guestfish blockdev-getsz /dev/sda
+
+# -1 endsector
+guestfish part-resize /dev/sda 2 endsect
+guestfish resize2fs /dev/sda2
+
+SD card (block device) should be multiple of 2, partition/filesystem size should be flexible.

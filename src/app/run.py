@@ -1,11 +1,7 @@
 #!/bin/python3
 
 # Import system libraries
-import sys
-import argparse
-
-# Do not write pycache
-sys.dont_write_bytecode=True
+import sys, argparse
 
 from lib.config import get_env
 from lib.logger import log, logging
@@ -50,6 +46,7 @@ if not 'func' in args:
 
 # Combine arguments and variables into options
 opts = argparse.Namespace(**vars(args), **vars(env))
+opts.IMAGE_FILE_PATH = f'{opts.DIST_DIR}/{opts.IMAGE_FILE_NAME}'
 
 # Set verbose logging
 if args.verbose:

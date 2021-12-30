@@ -1,5 +1,6 @@
 import os, shutil, subprocess
 from lib.logger import log
+from lib.process import run
 
 def check_base_file(file_name, base_dir, dist_dir):
     has_file = os.path.isfile(f'{dist_dir}/{file_name}')
@@ -37,11 +38,9 @@ def start(opts):
   kernel_path = f'{run_dir}/{opts.KERNEL_FILE_NAME}'
   dtb_path = f'{run_dir}/{opts.DTB_FILE_NAME}'
 
-  error_output = None if opts.verbose else subprocess.DEVNULL
-
   # Start emulator
   log.info("Starting the emulator ...")
-  subprocess.Popen(f"""
+  run(f"""
     qemu-system-aarch64 \
     -M raspi3 \
     -m 1G \
@@ -52,7 +51,10 @@ def start(opts):
     -nographic -no-reboot \
     -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::{opts.port}-:22 \
     -append \"rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether\"
-    """, shell=True, stderr=error_output).wait()
+    """,
+    get_output=False,
+    stderr=None if opts.verbose else subprocess.DEVNULL
+  )
 
 
 # Start command parser

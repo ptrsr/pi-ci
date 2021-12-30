@@ -3,22 +3,19 @@ A raspberry Pi emulator in a [Docker image](https://hub.docker.com/r/ptrsr/pi-ci
 
 ## Overview
 The PI-CI project enables developers to easily:
-- Run an RPi VM.
-- Prepare an RPi Pi configuration inside the VM.
-- Flash the RPi VM image to a physical SD card.
-
+- Run a RPi VM.
+- Prepare a configuration inside a RPi VM.
+- Flash a RPi VM image to a physical SD card.
 
 Example use cases:
 - Preconfigure Raspberry Pi servers that work from first boot.
 - Create reproducible server configurations using Ansible.
 - Automate the distribution of configurations through a CI pipeline.
 - Test ARM applications in a virtualized environment.
-- Safely test backups without a second SD card.
 
 Key features:
 - Pi 3 and 4 support
-- 64 bit (ARMv8) Raspbian OS included
-- Support for 32 bit ARMv7l distro's
+- 64 bit (ARMv8) Raspberry PI OS (Buster) included
 - Internet access
 - No root required
 - Ansible preinstalled
@@ -31,24 +28,23 @@ Key features:
 $ docker pull ptrsr/pi-ci
 $ docker run --rm -it ptrsr/pi-ci
 
-> usage: docker run [docker args] ptrsr/pi-ci [optional args] [command]
+> usage: docker run [docker args] ptrsr/pi-ci [command] [optional args]
 > 
 > PI-CI: the reproducible PI emulator.
 > 
 > positional arguments:
->   command         [start, status, resize, flash, backup]
+>   command     [start, resize, flash]
 > 
 > optional arguments:
->   -n PORT         port number (default: 8000)
->   -s STORAGE_DEV  storage device (default: /dev/mmcblk0)
->   -d DIST_PATH    storage path (default: /dist)
->   -y              skip confirmation
->   -v              verbose output
+>   -h, --help  show this help message and exit
+>   -v          show verbose output
 > 
 > Refer to https://github.com/ptrsr/pi-ci for the full README on how to use this program.
 ```
+Each command has a help message, for example: 
+`docker run --rm -it ptrsr/pi-ci start -h`.
 
-### Start machine
+## Start machine
 Simply run a `ptrsr/pi-ci` container with the start command:
 ```sh
 docker run --rm -it ptrsr/pi-ci start
@@ -58,16 +54,16 @@ Login using the default Raspbian credentials:
 | -------- | --------- |
 | pi       | raspberry | 
 
-### Persistence
+## Persistence
 To save the resulting image, use a bind mount to `/dist`:
 ```sh
-docker run --rm -it -v $(realpath .)/dist:/dist ptrsr/pi-ci start
+docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci start
 ```
 **NOTE**: this example will create and mount the `dist` folder in the current working directory of the host.
 
 To restart the image, simply use the same bind mount.
 
-### SSH access
+## SSH access
 To enable ssh access, run the image with the **host** network mode.
 ```sh
 docker run --rm --network=host ptrsr/pi-ci start
@@ -78,11 +74,28 @@ Then ssh into the virtual Pi:
 ssh pi@localhost -p 2222
 ```
 
-### Flash 
+## Resize
+The default image is 2 gigabytes in size. This can be increased (but **not decreased!**) through the `resize` command. Increasing the size can be done in two ways:
+1. by providing a path to the target device (e.g. `/dev/mmcblk0`). The resulting image will be the same size as the target device.
+
+2. By providing a specific size in gigabytes, megabytes or bytes (e.g. 8G, 8192M, 8589934592).
+
+For an image to be flashed to a device, the image has to be the less or equal to the device size.
+
+```sh
+docker run --rm -it -v $PWD/dist:/dist --device=/dev/mmcblk0 ptrsr/pi-ci resize /dev/mmcblk0
+```
+
+**NOTE**: although an SD card will say a specific size (such as 16GB), the device is usually if not always smaller (GB vs GiB). Therefore, using a target device is recommended.
+
+**NOTE**: resizing can potentially be a dangerous operation. Always make backup of the `image.qcow2` file in the `dist` folder before proceeding.
+
+## Flash 
 To flash the prepared image to a storage device (such as an SD card), provide the container with the device and run the flash command:
+```sh
+docker run --rm -it -v $PWD/dist:/dist --device=/dev/mmcblk0 ptrsr/pi-ci flash /dev/mmcblk0
 ```
-docker run --rm -it -v $(realpath .):/dist --device=/dev/mmcblk0 ptrsr/pi-ci flash
-```
+On the first boot of the real RPi, a program will automatically inflate the root partition to fill the rest of the target device.
 
 ## Automation
 Using Ansible, it is possible to automate the whole configuration process. Ansible requires docker-py to be installed. This can be done using `pip3 install docker-py'.
@@ -112,13 +125,3 @@ PI-CI should work on Ubuntu 18.04. It has automatically been tested on Ubuntu 20
 
 ## License
 PI-CI is licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html).
-
-## NOTES
-qemu-img resize distro2.qcow2 3G
-guestfish blockdev-getsz /dev/sda
-
-# -1 endsector
-guestfish part-resize /dev/sda 2 endsect
-guestfish resize2fs /dev/sda2
-
-SD card (block device) should be multiple of 2, partition/filesystem size should be flexible.

@@ -9,7 +9,6 @@ from lib.logger import log, logging
 from func.start import start_parser
 from func.resize import resize_parser
 from func.flash import flash_parser
-from func.backup import backup_parser
 
 # Use environment variables (defaults given in dockerfile)
 env = get_env()
@@ -30,14 +29,19 @@ shared_parser.add_argument('-v', dest='verbose', action='store_true', help="show
 parser = argparse.ArgumentParser(description=main_description, epilog=main_epilog, usage=main_usage, parents=[shared_parser])
 
 # Define CLI subcommand group
-command_group = parser.add_subparsers(metavar="command", help="[start, resize, flash, backup]")
+command_group = parser.add_subparsers(metavar="command", help="[start, resize, flash]")
 
 # Define CLI subcommands
-for enable_parser in [start_parser, resize_parser, flash_parser, backup_parser]:
+for enable_parser in [start_parser, resize_parser, flash_parser]:
   enable_parser(command_group, shared_parser, get_usage, env)
 
 # Get CLI arguments
-args = parser.parse_args(sys.argv[1:])
+try:
+  args = parser.parse_args(sys.argv[1:])
+except Exception as e:
+  log.error(e)
+  log.info("Exiting ...")
+  exit(1)
 
 # Print help on missing command or help argument
 if not 'func' in args:
@@ -60,3 +64,4 @@ try:
 except Exception as e:
   log.error(e)
   log.info("Exiting ...")
+  exit(1)

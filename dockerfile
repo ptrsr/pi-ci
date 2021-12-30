@@ -1,5 +1,4 @@
-# PI-CI v0.2
-
+# PI-CI
 # Shared variables
 ARG BUILD_DIR=/build/
 

@@ -50,7 +50,7 @@ RUN mkdir /mnt/root /mnt/boot \
  && guestfish add tmp/$DISTRO_FILE : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root
 
 # Add default username and password to configuration
-RUN { echo "$PI_USERNAME"; echo "$PI_PASSWORD" | openssl passwd -6 -stdin; } | tr -s "\n" ":" | sed '$s/:$/\n/' > /boot/userconf
+RUN { echo "$PI_USERNAME"; echo "$PI_PASSWORD" | openssl passwd -6 -stdin; } | tr -s "\n" ":" | sed '$s/:$/\n/' > /mnt/boot/userconf.txt
 
 # Clone the RPI kernel repo
 RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/

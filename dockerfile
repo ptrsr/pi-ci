@@ -2,7 +2,7 @@
 # Shared variables
 ARG BUILD_DIR=/build/
 
-FROM ubuntu:20.04 as builder
+FROM ubuntu:22.04 as builder
 
 # Use shared build directory
 ARG BUILD_DIR
@@ -12,13 +12,17 @@ ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
 ARG KERNEL_BRANCH=rpi-5.4.y
 
 # Distro download
-ARG DISTRO_FILE=2021-05-07-raspios-buster-arm64-lite
-ARG DISTRO_IMG=https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2021-05-28/$DISTRO_FILE.zip
+ARG DISTRO_FILE=2023-02-21-raspios-bullseye-arm64-lite.img
+ARG DISTRO_IMG=https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2023-02-22/$DISTRO_FILE.xz
 
 # Kernel compile options
 ARG KERNEL=kernel8
 ARG ARCH=arm64
 ARG CROSS_COMPILE=aarch64-linux-gnu-
+
+# Default pi username and password
+ARG PI_USERNAME=pi
+ARG PI_PASSWORD=raspberry
 
 # Install dependencies
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -33,15 +37,20 @@ RUN apt-get update && apt install -y \
     libssl-dev \
     linux-image-generic \
     make \
-    unzip \
-    wget
+    wget \
+    openssl \
+    xz-utils
 
 # Download raspbian distro
-RUN wget -nv -O /tmp/$DISTRO_FILE.zip $DISTRO_IMG \
- && unzip /tmp/$DISTRO_FILE.zip -d /tmp
+RUN wget -nv -O /tmp/$DISTRO_FILE.xz $DISTRO_IMG \
+ && unxz /tmp/$DISTRO_FILE.xz
+
 # Extract distro boot and root
 RUN mkdir /mnt/root /mnt/boot \
- && guestfish add tmp/$DISTRO_FILE.img : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root
+ && guestfish add tmp/$DISTRO_FILE : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root
+
+# Add default username and password to configuration
+RUN { echo "$PI_USERNAME"; echo "$PI_PASSWORD" | openssl passwd -6 -stdin; } | tr -s "\n" ":" | sed '$s/:$/\n/' > /boot/userconf
 
 # Clone the RPI kernel repo
 RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
@@ -83,10 +92,7 @@ CMD cp $BUILD_DIR/distro.qcow2 ./
 
 
 # ---------------------------
-FROM ubuntu:20.04 as emulator
-
-ARG QEMU_GIT=https://github.com/qemu/qemu.git
-ARG QEMU_BRANCH=v6.1.0-rc0
+FROM ubuntu:22.04 as emulator
 
 # Project build directory
 ARG BUILD_DIR
@@ -108,32 +114,14 @@ COPY --from=0 /mnt/boot/bcm2710-rpi-3-b.dtb $BASE_DIR/$DTB_FILE_NAME
 # Install packages and build essentials
 ARG DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update && apt install -y \
-    build-essential \
-    cmake \
-    git \
-    libglib2.0-dev \
-    libgio-cil \
-    libguestfs-tools \
-    libpixman-1-dev \
-    linux-image-generic \
-    ninja-build \
-    pkg-config \
-    python3.8 \
-    python3-pip
-
-# Set default Python version to 3.8 
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1
-
-# Build and install Qemu from source
-RUN git clone --single-branch --branch $QEMU_BRANCH $QEMU_GIT $BUILD_DIR/qemu/ \
- && mkdir $BUILD_DIR/qemu/build \
- && (cd $BUILD_DIR/qemu/build && ../configure --target-list=aarch64-softmmu) \
- && make -C $BUILD_DIR/qemu/build install -j$(nproc) \
- && rm -r $BUILD_DIR
+    python3 \
+    python3-pip \
+    qemu-system-arm \
+    qemu-efi
 
 # Update system and install Ansible
 RUN qemu-system-aarch64 \
-   -M raspi3 \
+   -M raspi3b \
    -m 1G \
    -smp 4 \
    -sd $BASE_DIR/$IMAGE_FILE_NAME \
@@ -141,22 +129,12 @@ RUN qemu-system-aarch64 \
    -dtb $BASE_DIR/$DTB_FILE_NAME \
    -nographic -no-reboot \
    -device usb-net,netdev=net0 -netdev user,id=net0 \
-   -append "rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether" \
-   2> /dev/null
+   -append "rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether"
 
 # Copy requirements first
 COPY src/app/requirements.txt $APP_DIR/requirements.txt
 # Install Python dependencies
 RUN pip3 install -r $APP_DIR/requirements.txt
-
-# Remove redundant build dependencies
-RUN apt-get purge --auto-remove -y \
-    build-essential \
-    cmake \
-    git \
-    libglib2.0-dev \
-    ninja-build \
-    pkg-config
 
 # Copy helper scripts
 COPY src/app/ $APP_DIR

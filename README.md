@@ -97,6 +97,13 @@ docker run --rm -it -v $PWD/dist:/dist --device=/dev/mmcblk0 ptrsr/pi-ci flash /
 ```
 On the first boot of the real RPi, a program will automatically inflate the root partition to fill the rest of the target device.
 
+## Export
+The export function converts the virtual (`.qcow2`) image to a raw (`.img`) image. This is particularly handy when it is not possible to directly flash an image (e.g. when using WSL), as the raw image can be flashed using tools like [Balena Etcher](https://www.balena.io/etcher). The export command takes two optional arguments; the `--input` and `--output` path;
+```sh
+docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci export --input /dist/image.qcow2 --output /dist/image.img
+```
+The raw image should pop up alongside the virtual image in the mounted `dist` folder in the example above.
+
 ## Automation
 Using Ansible, it is possible to automate the whole configuration process. Ansible requires docker-py to be installed. This can be done using `pip3 install docker-py'.
 

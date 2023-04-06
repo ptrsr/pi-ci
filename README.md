@@ -1,6 +1,8 @@
 # PI-CI [![PI-CI](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml)
 A raspberry Pi emulator in a [Docker image](https://hub.docker.com/r/ptrsr/pi-ci) that lets developers easily prepare and flash RPi configurations.
 
+Check out the **[template repo](https://github.com/ptrsr/pi-template)** for a working example!
+
 ## Overview
 The PI-CI project enables developers to easily:
 - Run a RPi VM.

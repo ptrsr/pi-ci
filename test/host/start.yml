@@ -9,8 +9,9 @@
       image: ptrsr/pi-ci
       command: start
       state: started
-      network_mode: host
       tls_hostname: localhost
+      published_ports:
+        - 2222:2222
       volumes:
         - "{{ dist_dir|default(omit) }}:/dist"
 

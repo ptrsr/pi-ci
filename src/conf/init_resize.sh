@@ -224,4 +224,7 @@ else
   sleep 5
 fi
 
+mount -o remount /
+resize2fs /dev/mmcblk0p2
+
 reboot_pi

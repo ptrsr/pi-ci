@@ -70,6 +70,7 @@ RUN cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
 COPY src/conf/fstab /mnt/root/etc/
 COPY src/conf/cmdline.txt /mnt/boot/
 COPY src/conf/init_resize.sh /mnt/root/usr/lib/raspi-config/init_resize.sh
+
 # Run SSH server on startup
 RUN touch /mnt/boot/ssh
 
@@ -152,4 +153,3 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV DIST_DIR /dist
 ENV STORAGE_PATH /dev/mmcblk0
 ENV PORT 2222
-ENV LIBGUESTFS_DEBUG=1

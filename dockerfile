@@ -55,7 +55,7 @@ RUN { echo "$PI_USERNAME"; echo "$PI_PASSWORD" | openssl passwd -6 -stdin; } | t
 # Clone the RPI kernel repo
 RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
 # Copy build configuration
-COPY src/.config $BUILD_DIR/linux/
+COPY src/conf/.config $BUILD_DIR/linux/
 # Build kernel, modules and device tree blobs
 RUN make -C $BUILD_DIR/linux/ -j$(nproc) Image modules dtbs
 
@@ -67,15 +67,16 @@ RUN cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
  && make -C $BUILD_DIR/linux/ INSTALL_MOD_PATH=/mnt/root modules_install
 
 # Copy boot configuration
-COPY src/fstab /mnt/root/etc/
-COPY src/cmdline.txt /mnt/boot/
+COPY src/conf/fstab /mnt/root/etc/
+COPY src/conf/cmdline.txt /mnt/boot/
+COPY src/conf/init_resize.sh /mnt/root/usr/lib/raspi-config/init_resize.sh
 # Run SSH server on startup
 RUN touch /mnt/boot/ssh
 
 # Copy setup configuration
 RUN mkdir -p /mnt/root/usr/local/lib/systemd/system
-COPY src/setup.service /mnt/root/usr/local/lib/systemd/system/
-COPY src/setup.sh /mnt/root/usr/local/bin/
+COPY src/conf/setup.service /mnt/root/usr/local/lib/systemd/system/
+COPY src/conf/setup.sh /mnt/root/usr/local/bin/
 RUN ln -rs /mnt/root/usr/local/lib/systemd/system/setup.service /mnt/root/etc/systemd/system/multi-user.target.wants
 RUN ln -rs /mnt/root/lib/systemd/system/systemd-time-wait-sync.service /mnt/root/etc/systemd/system/sysinit.target.wants/systemd-time-wait-sync.service
 RUN rm mnt/root/etc/systemd/system/timers.target.wants/apt-daily*
@@ -117,6 +118,8 @@ RUN apt-get update && apt install -y \
     python3 \
     python3-pip \
     qemu-system-arm \
+    linux-image-generic \
+    libguestfs-tools \
     qemu-efi
 
 # Update system and install Ansible
@@ -139,6 +142,8 @@ RUN pip3 install -r $APP_DIR/requirements.txt
 # Copy helper scripts
 COPY src/app/ $APP_DIR
 
+RUN apt install -y linux-image-generic
+
 # Helper script on running container
 ENTRYPOINT ["/app/run.py"]
 
@@ -147,3 +152,4 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV DIST_DIR /dist
 ENV STORAGE_PATH /dev/mmcblk0
 ENV PORT 2222
+ENV LIBGUESTFS_DEBUG=1

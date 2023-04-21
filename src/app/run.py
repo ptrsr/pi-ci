@@ -6,6 +6,7 @@ import sys, argparse
 from lib.config import get_env
 from lib.logger import log, logging
 
+from func.init import init_parser
 from func.start import start_parser
 from func.resize import resize_parser
 from func.flash import flash_parser

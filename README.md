@@ -35,7 +35,7 @@ $ docker run --rm -it ptrsr/pi-ci
 > PI-CI: the reproducible PI emulator.
 > 
 > positional arguments:
->   command     [start, resize, flash]
+>   command     [init, start, resize, flash, export]
 > 
 > optional arguments:
 >   -h, --help  show this help message and exit

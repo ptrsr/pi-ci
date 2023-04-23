@@ -37,7 +37,7 @@ def resize(opts):
   # Size of virtual image in GB
   desired_device_size = None
   for i in [ 4, 8, 16, 32, 64, 128, 256 ]:
-    if i * Size.GIGABYTE > opts.target:
+    if i * Size.GIGABYTE >= opts.target:
       desired_device_size = i * Size.GIGABYTE
       break
 
@@ -52,7 +52,7 @@ def resize(opts):
     run(f'qemu-img resize {opts.IMAGE_FILE_PATH} {desired_device_size}', True)
 
   log.info("Resizing virtual partition ...")
-  end_sector = int(opts.target / Size.BLOCK)
+  end_sector = int(opts.target / Size.BLOCK) - 1
 
   run(f"""guestfish add {opts.IMAGE_FILE_PATH} : run \
     : part-resize /dev/sda 2 {end_sector} \

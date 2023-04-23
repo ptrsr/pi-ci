@@ -82,6 +82,7 @@ RUN ln -rs /mnt/root/usr/local/lib/systemd/system/setup.service /mnt/root/etc/sy
 RUN ln -rs /mnt/root/lib/systemd/system/systemd-time-wait-sync.service /mnt/root/etc/systemd/system/sysinit.target.wants/systemd-time-wait-sync.service
 RUN rm mnt/root/etc/systemd/system/timers.target.wants/apt-daily*
 RUN ln -rs /mnt/root/dev/null /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service
+RUN rm /mnt/root/etc/init.d/resize2fs_once
 
 # Create new distro image from modified boot and root
 RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \

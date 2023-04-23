@@ -144,8 +144,6 @@ RUN pip3 install -r $APP_DIR/requirements.txt
 # Copy helper scripts
 COPY src/app/ $APP_DIR
 
-RUN apt install -y linux-image-generic
-
 # Helper script on running container
 ENTRYPOINT ["/app/run.py"]
 

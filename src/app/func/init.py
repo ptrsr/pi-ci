@@ -9,6 +9,8 @@ def check_base_file(file_name, base_dir, dist_dir):
     # Copy base file to shared volume
     log.info(f"No '{file_name}' provided in volume, providing default one ...")
     shutil.copyfile(f'{base_dir}/{file_name}', f'{dist_dir}/{file_name}')
+  else:
+    log.info(f"'{file_name}' already exists ...")
 
 
 def start(opts):
@@ -40,6 +42,6 @@ def init_parser(parsers, parent_parser, get_usage, env):
   description = "Command for initializing base files for the emulator in the chosen distribution folder."
 
   parser = parsers.add_parser("init", description=description, parents=[parent_parser], usage=get_usage('init'))
-  parser.add_argument('-d', '--dist', dest='dist', type=int, help=f"folder in which to initialize (default: {env.DIST_DIR})", default=env.DIST_DIR)
+  parser.add_argument('-d', '--dist', dest='dist', type=str, help=f"folder in which to initialize (default: {env.DIST_DIR})", default=env.DIST_DIR)
 
   parser.set_defaults(func=lambda *args: start(*args))

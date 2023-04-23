@@ -32,10 +32,10 @@ shared_parser.add_argument('-v', dest='verbose', action='store_true', help="show
 parser = argparse.ArgumentParser(description=main_description, epilog=main_epilog, usage=main_usage, parents=[shared_parser])
 
 # Define CLI subcommand group
-command_group = parser.add_subparsers(metavar="command", help="[start, resize, flash, export]")
+command_group = parser.add_subparsers(metavar="command", help="[init, start, resize, flash, export]")
 
 # Define CLI subcommands
-for enable_parser in [start_parser, resize_parser, flash_parser, export_parser]:
+for enable_parser in [init_parser, start_parser, resize_parser, flash_parser, export_parser]:
   enable_parser(command_group, shared_parser, get_usage, env)
 
 # Get CLI arguments

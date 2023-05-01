@@ -51,10 +51,7 @@ Simply run a `ptrsr/pi-ci` container with the start command:
 ```sh
 docker run --rm -it ptrsr/pi-ci start
 ```
-Login using the default Raspbian credentials:
-| Username | Password  | 
-| -------- | --------- |
-| pi       | raspberry | 
+The emulator will automatically log into `root`.
 
 ## Persistence
 To save the resulting image, use a bind mount to `/dist`:
@@ -66,14 +63,14 @@ docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci start
 To restart the image, simply use the same bind mount.
 
 ## SSH access
-To enable ssh access, run the image with the **host** network mode.
+To enable ssh access, run the container with pot **2222** exposed.
 ```sh
-docker run --rm --network=host ptrsr/pi-ci start
+docker run --rm -p 2222:2222 ptrsr/pi-ci start
 ```
 
 Then ssh into the virtual Pi:
 ```sh
-ssh pi@localhost -p 2222
+ssh root@localhost -p 2222
 ```
 
 ## Resize
@@ -120,6 +117,7 @@ ansible-playbook -i ./test/hosts.yml ./test/main.yml
 ```
 
 ## Tips
+- Do not forget to set a password for `root` and disable `PermitRootLogin` in the `/etc/ssh/sshd_config` for security.
 - Do not stop or kill the Docker container while the VM is running, this **WILL** corrupt the image!
 - Make sure to regularly back up the `distro.qcow2` image.
 

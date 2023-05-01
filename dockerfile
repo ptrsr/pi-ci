@@ -20,10 +20,6 @@ ARG KERNEL=kernel8
 ARG ARCH=arm64
 ARG CROSS_COMPILE=aarch64-linux-gnu-
 
-# Default pi username and password
-ARG PI_USERNAME=pi
-ARG PI_PASSWORD=raspberry
-
 # Install dependencies
 ARG DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update && apt install -y \
@@ -49,9 +45,6 @@ RUN wget -nv -O /tmp/$DISTRO_FILE.xz $DISTRO_IMG \
 RUN mkdir /mnt/root /mnt/boot \
  && guestfish add tmp/$DISTRO_FILE : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root
 
-# Add default username and password to configuration
-RUN { echo "$PI_USERNAME"; echo "$PI_PASSWORD" | openssl passwd -6 -stdin; } | tr -s "\n" ":" | sed '$s/:$/\n/' > /mnt/boot/userconf.txt
-
 # Clone the RPI kernel repo
 RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
 # Copy build configuration
@@ -74,6 +67,10 @@ COPY src/conf/init_resize.sh /mnt/root/usr/lib/raspi-config/init_resize.sh
 # Run SSH server on startup
 RUN touch /mnt/boot/ssh
 
+# Allow SSH root login with no password
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /mnt/root/etc/ssh/sshd_config \
+ && sed -i 's/#PermitEmptyPasswords no/permitEmptyPasswords yes/' /mnt/root/etc/ssh/sshd_config
+
 # Copy setup configuration
 RUN mkdir -p /mnt/root/usr/local/lib/systemd/system
 COPY src/conf/setup.service /mnt/root/usr/local/lib/systemd/system/
@@ -83,6 +80,10 @@ RUN ln -rs /mnt/root/lib/systemd/system/systemd-time-wait-sync.service /mnt/root
 RUN rm mnt/root/etc/systemd/system/timers.target.wants/apt-daily*
 RUN ln -rs /mnt/root/dev/null /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service
 RUN rm /mnt/root/etc/init.d/resize2fs_once
+
+# Setup root auto login
+RUN mkdir /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/
+COPY src/conf/login.conf /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/override.conf
 
 # Create new distro image from modified boot and root
 RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \

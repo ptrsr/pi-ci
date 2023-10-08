@@ -47,6 +47,11 @@ RUN mkdir /mnt/root /mnt/boot \
 
 # Clone the RPI kernel repo
 RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
+
+# Add WireGuard kernel module
+RUN git clone https://git.zx2c4.com/wireguard-linux-compat $BUILD_DIR/wireguard-compat \
+ && $BUILD_DIR/wireguard-compat/kernel-tree-scripts/jury-rig.sh $BUILD_DIR/linux/
+
 # Copy build configuration
 COPY src/conf/.config $BUILD_DIR/linux/
 # Build kernel, modules and device tree blobs
@@ -72,14 +77,14 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /mnt/root
  && sed -i 's/#PermitEmptyPasswords no/permitEmptyPasswords yes/' /mnt/root/etc/ssh/sshd_config
 
 # Copy setup configuration
-RUN mkdir -p /mnt/root/usr/local/lib/systemd/system
 COPY src/conf/setup.service /mnt/root/usr/local/lib/systemd/system/
 COPY src/conf/setup.sh /mnt/root/usr/local/bin/
-RUN ln -rs /mnt/root/usr/local/lib/systemd/system/setup.service /mnt/root/etc/systemd/system/multi-user.target.wants
-RUN ln -rs /mnt/root/lib/systemd/system/systemd-time-wait-sync.service /mnt/root/etc/systemd/system/sysinit.target.wants/systemd-time-wait-sync.service
-RUN rm mnt/root/etc/systemd/system/timers.target.wants/apt-daily*
-RUN ln -rs /mnt/root/dev/null /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service
-RUN rm /mnt/root/etc/init.d/resize2fs_once
+RUN mkdir -p /mnt/root/usr/local/lib/systemd/system \
+ && ln -rs /mnt/root/usr/local/lib/systemd/system/setup.service /mnt/root/etc/systemd/system/multi-user.target.wants \
+ && ln -rs /mnt/root/lib/systemd/system/systemd-time-wait-sync.service /mnt/root/etc/systemd/system/sysinit.target.wants/systemd-time-wait-sync.service \
+ && rm mnt/root/etc/systemd/system/timers.target.wants/apt-daily* \
+ && ln -rs /mnt/root/dev/null /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service \
+ && rm /mnt/root/etc/init.d/resize2fs_once
 
 # Setup root auto login
 RUN mkdir /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/

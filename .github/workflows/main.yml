@@ -7,6 +7,16 @@ jobs:
   build:
     runs-on: ubuntu-20.04
     steps:
+      - name: Free up disk space on github runner
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          # android: false
+          # dotnet: false
+          # haskell: false
+          # large-packages: false
+          # swap-storage: false
+
       - name: Checkout
         uses: actions/checkout@v3
 

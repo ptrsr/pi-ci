@@ -1,8 +1,6 @@
 # PI-CI [![PI-CI](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml)
 A raspberry Pi emulator in a [Docker image](https://hub.docker.com/r/ptrsr/pi-ci) that lets developers easily prepare and flash RPi configurations.
 
-Check out the **[template repo](https://github.com/ptrsr/pi-template)** for a working example!
-
 ## Overview
 The PI-CI project enables developers to easily:
 - Run a RPi VM.
@@ -17,12 +15,13 @@ Example use cases:
 
 Key features:
 - Pi 3 and 4 support
-- 64 bit (ARMv8) Raspberry PI OS (Buster) included
+- 64 bit (ARMv8) Raspberry PI OS (Bullseye) included
 - Internet access
 - No root required
 - Ansible preinstalled
 - Safe, fully reproducible from source
 - Configurable kernel
+- Wireguard module included
 - Tested and stable
 
 ## Usage
@@ -104,7 +103,7 @@ docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci export --input /dist/image.qc
 The raw image should pop up alongside the virtual image in the mounted `dist` folder in the example above.
 
 ## Automation
-Using Ansible, it is possible to automate the whole configuration process. Ansible requires docker-py to be installed. This can be done using `pip3 install docker-py'.
+Using Ansible, it is possible to automate the whole configuration process. Ansible requires docker-py to be installed. This can be done using `pip3 install docker-py`.
 
 Ansible can take care of:
 1. Starting the VM

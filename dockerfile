@@ -12,8 +12,8 @@ ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
 ARG KERNEL_BRANCH=rpi-5.4.y
 
 # Distro download
-ARG DISTRO_FILE=2023-02-21-raspios-bullseye-arm64-lite.img
-ARG DISTRO_IMG=https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2023-02-22/$DISTRO_FILE.xz
+ARG DISTRO_FILE=2023-10-10-raspios-bookworm-arm64-lite.img
+ARG DISTRO_IMG=https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2023-10-10/$DISTRO_FILE.xz
 
 # Kernel compile options
 ARG KERNEL=kernel8
@@ -130,7 +130,7 @@ RUN apt-get update && apt install -y \
     libguestfs-tools \
     qemu-efi
 
-# Update system and install Ansible
+# Update system
 RUN qemu-system-aarch64 \
    -M raspi3b \
    -m 1G \

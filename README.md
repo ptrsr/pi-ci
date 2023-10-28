@@ -15,7 +15,7 @@ Example use cases:
 
 Key features:
 - Pi 3 and 4 support
-- 64 bit (ARMv8) Raspberry PI OS (Bullseye) included
+- 64 bit (ARMv8) Raspberry PI OS (Bookworm) included
 - Internet access
 - No root required
 - Ansible preinstalled

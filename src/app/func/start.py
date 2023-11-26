@@ -64,5 +64,6 @@ def start_parser(parsers, parent_parser, get_usage, env):
 
   parser = parsers.add_parser("start", description=description, parents=[parent_parser], usage=get_usage('start'))
   parser.add_argument('-p', dest='port', type=int, help=f"port number (default: {env.PORT})", default=env.PORT)
+  parser.add_argument('--image', dest='image_path', type=str, help=f"image file (default: {env.IMAGE_FILE_NAME})", default=env.IMAGE_FILE_NAME)
 
   parser.set_defaults(func=lambda *args: start(*args))

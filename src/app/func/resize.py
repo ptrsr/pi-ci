@@ -3,7 +3,7 @@ import os, re, argparse, textwrap
 from lib.logger import log
 from lib.confirm import confirm
 from lib.process import run
-from lib.image import get_device_size, get_image_size, get_virtual_size, Size
+from lib.image import get_device_size, get_partition_size, get_virtual_size, Size
 from func.start import check_base_file
 
 
@@ -16,14 +16,14 @@ def resize(opts):
 
   check_base_file(opts.IMAGE_FILE_NAME, opts.BASE_DIR, opts.DIST_DIR)
 
-  if opts.confirm and not confirm("Resizing can damage the image, make sure to make a backup. Continue?", None):  
+  if opts.confirmed and not confirm("Resizing can damage the image, make sure to make a backup. Continue?", None):  
     exit(0)
 
   log.info(f"Resizing to {opts.target} bytes ...")
 
   # Find last sector of virtual image
   log.info("Checking current image size ...")
-  virtual_image_size = get_image_size(opts.IMAGE_FILE_PATH)
+  virtual_image_size = get_partition_size(opts.IMAGE_FILE_PATH)
 
   if virtual_image_size == opts.target:
     log.info("Image is already correct size!")
@@ -35,8 +35,9 @@ def resize(opts):
   virtual_device_size = get_virtual_size(opts.IMAGE_FILE_PATH)
 
   # Size of virtual image in GB
+  # NOTE: Unfortunately the VM requires the virtual SD card to be to the power of 2 in GB to run
   desired_device_size = None
-  for i in [ 4, 8, 16, 32, 64, 128, 256 ]:
+  for i in [ 2, 4, 8, 16, 32, 64, 128, 256 ]:
     if i * Size.GIGABYTE >= opts.target:
       desired_device_size = i * Size.GIGABYTE
       break
@@ -52,8 +53,11 @@ def resize(opts):
     run(f'qemu-img resize {opts.IMAGE_FILE_PATH} {desired_device_size}', True)
 
   log.info("Resizing virtual partition ...")
+  # NOTE: The underlying partitions can be less than the SD card size
+  #       This is to support shrinking during export
   end_sector = int(opts.target / Size.BLOCK) - 1
-
+  log.debug(f"End sector: {end_sector}")
+  
   run(f"""guestfish add {opts.IMAGE_FILE_PATH} : run \
     : part-resize /dev/sda 2 {end_sector} \
     : resize2fs /dev/sda2
@@ -101,6 +105,6 @@ def resize_parser(parsers, parent_parser, get_usage, env):
   parser = parsers.add_parser('resize', formatter_class=argparse.RawTextHelpFormatter, description=description, parents=[parent_parser], usage=usage)
 
   parser.add_argument('target', type=parse_size, help=help)
-  parser.add_argument('-y', dest='confirm', action='store_false', help="skip confirmation", default=True)
+  parser.add_argument('-y', dest='confirmed', action='store_false', help="skip confirmation", default=True)
 
   parser.set_defaults(func=lambda *args: resize(*args))

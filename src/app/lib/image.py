@@ -7,10 +7,10 @@ class Size():
   BLOCK = 512
   
 
-def get_image_size(image_path: str):
+def get_partition_size(image_path: str):
   part_list = run(f'guestfish add {image_path} : run : part-list /dev/sda', True)
   part_ends = re.findall('part_end: (\d+)', part_list)
-  return int(part_ends[len(part_ends) - 1]) - Size.BLOCK + 1
+  return int(part_ends[len(part_ends) - 1]) + 1 # - Size.BLOCK
 
 
 def get_device_size(device_path: str):

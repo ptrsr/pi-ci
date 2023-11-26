@@ -14,11 +14,10 @@ Example use cases:
 - Test ARM applications in a virtualized environment.
 
 Key features:
-- Pi 3 and 4 support
-- 64 bit (ARMv8) Raspberry PI OS (Bookworm) included
+- Pi 3, 4 and **5** support
+- 64 bit (ARMv8) Raspberry PI OS (Bookworm, latest) included
 - Internet access
 - No root required
-- Ansible preinstalled
 - Safe, fully reproducible from source
 - Configurable kernel
 - Wireguard module included
@@ -62,7 +61,7 @@ docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci start
 To restart the image, simply use the same bind mount.
 
 ## SSH access
-To enable ssh access, run the container with pot **2222** exposed.
+To enable ssh access, run the container with port **2222** exposed.
 ```sh
 docker run --rm -p 2222:2222 ptrsr/pi-ci start
 ```
@@ -76,7 +75,7 @@ ssh root@localhost -p 2222
 The default image is 2 gigabytes in size. This can be increased (but **not decreased!**) through the `resize` command. Increasing the size can be done in two ways:
 1. by providing a path to the target device (e.g. `/dev/mmcblk0`). The resulting image will be the same size as the target device.
 
-2. By providing a specific size in gigabytes, megabytes or bytes (e.g. 8G, 8192M, 8589934592).
+2. By providing a specific size in gigabytes, megabytes or bytes (e.g. `8G`, `8192M`, `8589934592`).
 
 For an image to be flashed to a device, the image has to be the less or equal to the device size.
 

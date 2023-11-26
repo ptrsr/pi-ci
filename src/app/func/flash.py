@@ -1,6 +1,6 @@
 import os, re, shutil
 from lib.logger import log
-from lib.image import get_device_size, get_image_size
+from lib.image import get_device_size, get_partition_size
 from lib.confirm import confirm
 from lib.process import run
 
@@ -11,11 +11,13 @@ def flash(opts):
   if not has_image:
     raise FileNotFoundError("No image found!")
 
-  if opts.confirm and not confirm("Flashing will overide any data on the storage device. Continue?", None):  
+  # TODO: should be able to shrink image, like in `export`
+
+  if opts.confirmed and not confirm("Flashing will overide any data on the storage device. Continue?", None):  
     exit(0)
 
   log.info("Checking device and image ...")
-  image_size = get_image_size(opts.IMAGE_FILE_PATH)
+  image_size = get_partition_size(opts.IMAGE_FILE_PATH)
   device_size = get_device_size(opts.target)
 
   if image_size > device_size:
@@ -56,6 +58,6 @@ def flash_parser(parsers, parent_parser, get_usage, env):
 
   parser = parsers.add_parser('flash', description=description, parents=[parent_parser], usage=get_usage('flash'))
   parser.add_argument('target', type=str, help=f"storage device (default: {env.STORAGE_PATH})", default=env.STORAGE_PATH)
-  parser.add_argument('-y', dest='confirm', action='store_false', help="skip confirmation", default=True)
+  parser.add_argument('-y', dest='confirmed', action='store_false', help="skip confirmation", default=True)
 
   parser.set_defaults(func=lambda *args: flash(*args))

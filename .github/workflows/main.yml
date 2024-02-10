@@ -18,11 +18,11 @@ jobs:
           # swap-storage: false
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cache register
         id: cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/image.tar
           key: ${{ hashFiles('dockerfile') }}
@@ -43,11 +43,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cache register
         id: cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/image.tar
           key: ${{ hashFiles('dockerfile') }}
@@ -66,7 +66,7 @@ jobs:
           -i test/hosts.yml \
           test/main.yml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: config
           path: dist
@@ -78,14 +78,14 @@ jobs:
     environment: docker-hub
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set tag variable
         run: echo "TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       - name: Cache register
         id: cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/image.tar
           key: ${{ hashFiles('dockerfile') }}
@@ -97,7 +97,7 @@ jobs:
         run: docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${{ env.TAG }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}

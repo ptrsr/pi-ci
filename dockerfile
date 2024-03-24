@@ -75,10 +75,12 @@ RUN touch /mnt/boot/ssh
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /mnt/root/etc/ssh/sshd_config \
  && sed -i 's/#PermitEmptyPasswords no/permitEmptyPasswords yes/' /mnt/root/etc/ssh/sshd_config
 
-# Set user configuration
-COPY src/conf/shadow /mnt/root/etc/
-# Remove default user home
-RUN rm -r /mnt/root/home/pi
+# Enable root login and remove user 'pi'
+RUN sed -i 's/^root:\*:/root::/' /mnt/root/etc/shadow \
+ && sed -i '/^pi/d' /mnt/root/etc/shadow \
+ && sed -i '/^pi/d' /mnt/root/etc/passwd \
+ && sed -i '/^pi/d' /mnt/root/etc/group \
+ && rm -r /mnt/root/home/pi
 
 # Setup root auto login
 RUN mkdir /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/

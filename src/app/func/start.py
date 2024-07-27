@@ -43,7 +43,7 @@ def start(opts):
   log.info("Starting the emulator ...")
   run(f"""
     qemu-system-aarch64 \
-    -M raspi3b \
+    -M raspi4b \
     -m 1G \
     -smp 4 \
     -sd {image_path} \

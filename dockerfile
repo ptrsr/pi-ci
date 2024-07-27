@@ -2,18 +2,18 @@
 # Shared variables
 ARG BUILD_DIR=/build/
 
-FROM ubuntu:22.04 as builder
+FROM ubuntu:24.04 as builder
 
 # Use shared build directory
 ARG BUILD_DIR
 
 # Kernel source
 ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
-ARG KERNEL_BRANCH=rpi-5.4.y
+ARG KERNEL_BRANCH=rpi-6.6.y
 
 # Distro download
-ARG DISTRO_FILE=2023-12-11-raspios-bookworm-arm64-lite.img
-ARG DISTRO_IMG=https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2023-12-11/$DISTRO_FILE.xz
+ARG DISTRO_FILE=2024-07-04-raspios-bookworm-arm64-lite.img
+ARG DISTRO_IMG=https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-07-04/$DISTRO_FILE.xz
 
 # Kernel compile options
 ARG KERNEL=kernel8
@@ -97,7 +97,7 @@ CMD cp $BUILD_DIR/distro.qcow2 ./
 
 
 # ---------------------------
-FROM ubuntu:22.04 as emulator
+FROM ubuntu:24.04 as emulator
 
 # Project build directory
 ARG BUILD_DIR

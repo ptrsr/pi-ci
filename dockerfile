@@ -16,7 +16,6 @@ ARG DISTRO_FILE=2024-07-04-raspios-bookworm-arm64-lite.img
 ARG DISTRO_IMG=https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-07-04/$DISTRO_FILE.xz
 
 # Kernel compile options
-ARG KERNEL=kernel8
 ARG ARCH=arm64
 ARG CROSS_COMPILE=aarch64-linux-gnu-
 
@@ -47,10 +46,6 @@ RUN mkdir /mnt/root /mnt/boot \
 
 # Clone the RPI kernel repo
 RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
-
-# Add WireGuard kernel module
-RUN git clone https://git.zx2c4.com/wireguard-linux-compat $BUILD_DIR/wireguard-compat \
- && $BUILD_DIR/wireguard-compat/kernel-tree-scripts/jury-rig.sh $BUILD_DIR/linux/
 
 # Copy build configuration
 COPY src/conf/.config $BUILD_DIR/linux/

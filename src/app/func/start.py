@@ -43,14 +43,13 @@ def start(opts):
   log.info("Starting the emulator ...")
   run(f"""
     qemu-system-aarch64 \
-    -M raspi4b \
+    -M raspi3b \
     -m 1G \
     -smp 4 \
     -sd {image_path} \
     -kernel {kernel_path} \
     -dtb {dtb_path} \
     -nographic -no-reboot \
-    -device usb-net,netdev=net0 -netdev user,id=net0,hostfwd=tcp::{opts.port}-:22 \
     -append \"rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether\"
     """,
     get_output=False,

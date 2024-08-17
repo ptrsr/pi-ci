@@ -9,7 +9,7 @@ ARG BUILD_DIR
 
 # Kernel source
 ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
-ARG KERNEL_BRANCH=rpi-6.6.y
+ARG KERNEL_BRANCH=rpi-6.0.y
 
 # Distro download
 ARG DISTRO_FILE=2024-07-04-raspios-bookworm-arm64-lite.img
@@ -119,7 +119,9 @@ RUN apt-get update && apt install -y \
     qemu-system-arm \
     linux-image-generic \
     libguestfs-tools \
-    qemu-efi
+    qemu-efi-aarch64
+
+ENV PIP_BREAK_SYSTEM_PACKAGES 1
 
 # Copy requirements first
 COPY src/app/requirements.txt $APP_DIR/requirements.txt

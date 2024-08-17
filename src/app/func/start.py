@@ -50,11 +50,13 @@ def start(opts):
     -kernel {kernel_path} \
     -dtb {dtb_path} \
     -nographic -no-reboot \
-    -append \"rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether\"
+    -append \"rw console=ttyAMA1,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=1\"
     """,
     get_output=False,
     stderr=None if opts.verbose else subprocess.DEVNULL
   )
+  # TODO: re-enable ethernet module
+  # -append \"rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether\"
 
 
 # Start command parser

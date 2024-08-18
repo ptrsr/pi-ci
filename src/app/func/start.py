@@ -43,14 +43,15 @@ def start(opts):
   log.info("Starting the emulator ...")
   run(f"""
     qemu-system-aarch64 \
-    -M raspi3b \
+    -machine virt \
+    -cpu cortex-a72 \
     -m 1G \
     -smp 4 \
-    -sd {image_path} \
+    -drive file={image_path},format=raw,id=hd0,if=none,cache=writeback \
+    -device virtio-blk,drive=hd0,bootindex=0 \
     -kernel {kernel_path} \
-    -dtb {dtb_path} \
     -nographic -no-reboot \
-    -append \"rw console=ttyAMA1,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether\"
+    -append \"rw console=ttyAMA0,115200 root=/dev/vda2 rootfstype=ext4 rootdelay=1 loglevel=2\"
     """,
     get_output=False,
     stderr=None if opts.verbose else subprocess.DEVNULL

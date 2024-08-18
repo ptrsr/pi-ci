@@ -1,0 +1,3 @@
+KERNEL=="vda", SYMLINK+="mmcblk0"
+KERNEL=="vda1", SYMLINK+="mmcblk0p1"
+KERNEL=="vda2", SYMLINK+="mmcblk0p2"

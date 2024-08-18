@@ -47,117 +47,92 @@ RUN mkdir /mnt/root /mnt/boot \
 # Clone the RPI kernel repo
 RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
 
-# Copy build configuration
-COPY src/conf/.config $BUILD_DIR/linux/
-# Build kernel, modules and device tree blobs
-RUN make -C $BUILD_DIR/linux/ -j$(nproc) Image modules dtbs
-
-# Copy kernel, modules and device tree blobs to extracted distro
-RUN cp $BUILD_DIR/linux/arch/arm64/boot/Image /mnt/boot/kernel8.img \
- && cp $BUILD_DIR/linux/arch/arm64/boot/dts/broadcom/*.dtb /mnt/boot/ \
- && cp $BUILD_DIR/linux/arch/arm64/boot/dts/overlays/*.dtb* /mnt/boot/overlays/ \
- && cp $BUILD_DIR/linux/arch/arm64/boot/dts/overlays/README /mnt/boot/overlays/ \
- && make -C $BUILD_DIR/linux/ INSTALL_MOD_PATH=/mnt/root modules_install
+# Cross compile vm kernel image
+RUN make -C $BUILD_DIR/linux defconfig \
+ && make -C $BUILD_DIR/linux kvm_guest.config \
+ && make -C $BUILD_DIR/linux/ -j$(nproc) Image
 
 # Copy boot configuration
 COPY src/conf/fstab /mnt/root/etc/
 COPY src/conf/cmdline.txt /mnt/boot/
+COPY src/conf/99-qemu.rules /mnt/root/etc/udev/rules.d/
 
 # Run SSH server on startup
 RUN touch /mnt/boot/ssh
 
 # Allow SSH root login with no password
-# RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /mnt/root/etc/ssh/sshd_config \
-#  && sed -i 's/#PermitEmptyPasswords no/permitEmptyPasswords yes/' /mnt/root/etc/ssh/sshd_config
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /mnt/root/etc/ssh/sshd_config \
+ && sed -i 's/#PermitEmptyPasswords no/permitEmptyPasswords yes/' /mnt/root/etc/ssh/sshd_config
 
 # Enable root login and remove user 'pi'
-# RUN sed -i 's/^root:\*:/root::/' /mnt/root/etc/shadow \
-#  && sed -i '/^pi/d' /mnt/root/etc/shadow \
-#  && sed -i '/^pi/d' /mnt/root/etc/passwd \
-#  && sed -i '/^pi/d' /mnt/root/etc/group \
-#  && rm -r /mnt/root/home/pi
+RUN sed -i 's/^root:\*:/root::/' /mnt/root/etc/shadow \
+ && sed -i '/^pi/d' /mnt/root/etc/shadow \
+ && sed -i '/^pi/d' /mnt/root/etc/passwd \
+ && sed -i '/^pi/d' /mnt/root/etc/group \
+ && rm -r /mnt/root/home/pi
 
 # Setup root auto login
-# RUN mkdir /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/
-# COPY src/conf/login.conf /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/override.conf
+RUN mkdir /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/
+COPY src/conf/login.conf /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/override.conf
 
 # Disable userconfig.service
 RUN rm /mnt/root/usr/lib/systemd/system/userconfig.service \
  && rm /mnt/root/etc/systemd/system/multi-user.target.wants/userconfig.service
 
-# RUN rm /mnt/root/etc/systemd/system/sysinit.target.wants/systemd-timesyncd.service \
-#  && rm /mnt/root/var/lib/systemd/deb-systemd-helper-enabled/sysinit.target.wants/systemd-timesyncd.service
+# Create new distro image from modified boot and root
+RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
+ && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
+ && sfdisk --part-type $BUILD_DIR/distro.img 1 c
+# Convert new distro image to sparse file
+RUN qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2
 
-# RUN ln -rs /mnt/root/usr/lib/systemd/system/serial-getty@.service /mnt/root/usr/lib/systemd/system/getty.target.wants/serial-getty@ttyAMA1.service
-
-COPY src/conf/config.txt /mnt/boot/config.txt
-
-
-RUN rm /mnt/root/etc/systemd/system/dev-serial1.device.wants/hciuart.service
-
-ENTRYPOINT bash
-
-# # Default to console instead of graphical user interface
-# RUN ln -f -s \
-#     multi-user.target \
-#     /mnt/root/usr/lib/systemd/system/default.target
+CMD cp $BUILD_DIR/distro.qcow2 ./
 
 
-# # Create new distro image from modified boot and root
-# RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
-#  && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
-#  && sfdisk --part-type $BUILD_DIR/distro.img 1 c
-# # Convert new distro image to sparse file
-# RUN qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2
+# ---------------------------
+FROM ubuntu:24.04 AS emulator
 
-# CMD cp $BUILD_DIR/distro.qcow2 ./
+# Project build directory
+ARG BUILD_DIR
+# Folder containing default configuration files
+ENV BASE_DIR=/base/
+# Folder containing helper scripts
+ENV APP_DIR=/app/
 
+ENV IMAGE_FILE_NAME=distro.img
+ENV KERNEL_FILE_NAME=kernel8.img
+ENV DTB_FILE_NAME=pi3.dtb
 
-# # ---------------------------
-# FROM ubuntu:24.04 AS emulator
+# Copy build files
+RUN mkdir $BASE_DIR
+COPY --from=0 $BUILD_DIR/distro.img $BASE_DIR/$IMAGE_FILE_NAME
+COPY --from=0 $BUILD_DIR/linux/arch/arm64/boot/Image $BASE_DIR/$KERNEL_FILE_NAME
 
-# # Project build directory
-# ARG BUILD_DIR
-# # Folder containing default configuration files
-# ENV BASE_DIR=/base/
-# # Folder containing helper scripts
-# ENV APP_DIR=/app/
+# Install packages and build essentials
+ARG DEBIAN_FRONTEND="noninteractive"
+RUN apt-get update && apt install -y \
+    python3 \
+    python3-pip \
+    qemu-system-arm \
+    linux-image-generic \
+    libguestfs-tools \
+    qemu-efi-aarch64
 
-# ENV IMAGE_FILE_NAME=distro.qcow2
-# ENV KERNEL_FILE_NAME=kernel8.img
-# ENV DTB_FILE_NAME=pi3.dtb
+ENV PIP_BREAK_SYSTEM_PACKAGES 1
 
-# # Copy build files
-# RUN mkdir $BASE_DIR
-# COPY --from=0 $BUILD_DIR/distro.qcow2 $BASE_DIR/$IMAGE_FILE_NAME
-# COPY --from=0 /mnt/boot/kernel8.img $BASE_DIR/$KERNEL_FILE_NAME
-# COPY --from=0 /mnt/boot/bcm2710-rpi-3-b.dtb $BASE_DIR/$DTB_FILE_NAME
+# Copy requirements first
+COPY src/app/requirements.txt $APP_DIR/requirements.txt
+# Install Python dependencies
+RUN pip3 install -r $APP_DIR/requirements.txt
 
-# # Install packages and build essentials
-# ARG DEBIAN_FRONTEND="noninteractive"
-# RUN apt-get update && apt install -y \
-#     python3 \
-#     python3-pip \
-#     qemu-system-arm \
-#     linux-image-generic \
-#     libguestfs-tools \
-#     qemu-efi-aarch64
+# Copy helper scripts
+COPY src/app/ $APP_DIR
 
-# ENV PIP_BREAK_SYSTEM_PACKAGES 1
+# Helper script on running container
+ENTRYPOINT ["/app/run.py"]
 
-# # Copy requirements first
-# COPY src/app/requirements.txt $APP_DIR/requirements.txt
-# # Install Python dependencies
-# RUN pip3 install -r $APP_DIR/requirements.txt
-
-# # Copy helper scripts
-# COPY src/app/ $APP_DIR
-
-# # Helper script on running container
-# ENTRYPOINT ["/app/run.py"]
-
-# # Helper variables
-# ENV PYTHONDONTWRITEBYTECODE 1
-# ENV DIST_DIR /dist
-# ENV STORAGE_PATH /dev/mmcblk0
-# ENV PORT 2222
+# Helper variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV DIST_DIR /dist
+ENV STORAGE_PATH /dev/mmcblk0
+ENV PORT 2222

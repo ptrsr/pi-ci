@@ -9,7 +9,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Free up disk space on github runner
         uses: jlumbroso/free-disk-space@main
@@ -44,7 +44,7 @@ jobs:
 
   test:
     needs: build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       publish: ${{ steps.check.outputs.publish }}
     steps:
@@ -65,6 +65,8 @@ jobs:
         run: |
           sudo apt-get install ansible
           pip3 install docker-py
+        env:
+          PIP_BREAK_SYSTEM_PACKAGES: 1
 
       - name: Run test
         run: |
@@ -88,7 +90,7 @@ jobs:
   publish:
     if: needs.test.outputs.publish == 'true'
     needs: test
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: docker-hub
     steps:
       - name: Checkout

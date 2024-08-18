@@ -15,12 +15,12 @@ Example use cases:
 
 Key features:
 - Pi 3, 4 and **5** support
-- 64 bit (ARMv8) Raspberry PI OS (Bookworm, latest) included
+- 64 bit (ARMv8) Raspberry PI OS (Bookworm) included
+  - image: **[2024-07-04-raspios-bookworm-arm64-lite](https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-07-04/)**
+  - kernel: **[6.6-y](https://github.com/raspberrypi/linux/tree/rpi-6.6.y)**
 - Internet access
 - No root required
 - Safe, fully reproducible from source
-- Configurable kernel
-- Wireguard module included
 - Tested and stable
 
 ## Usage
@@ -120,7 +120,7 @@ ansible-playbook -i ./test/hosts.yml ./test/main.yml
 - Make sure to regularly back up the `distro.qcow2` image.
 
 ## Versions
-PI-CI should work on Ubuntu 18.04. It has automatically been tested on Ubuntu 20.04 using GitHub Actions. Any other distro should work with the following software versions (or higher, perhaps):
+PI-CI has automatically been tested on Ubuntu 24.04 using GitHub Actions. Any other distro should work with the following software versions (or higher, perhaps):
 
 | Software  | Version  | 
 | ----------| -------- |

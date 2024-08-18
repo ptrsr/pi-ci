@@ -25,8 +25,7 @@ def start(opts):
 
     base_files = [ 
       opts.IMAGE_FILE_NAME,
-      opts.KERNEL_FILE_NAME,
-      opts.DTB_FILE_NAME 
+      opts.KERNEL_FILE_NAME
     ]
     
     # Check and resolve required files for running emulator
@@ -37,7 +36,6 @@ def start(opts):
   run_dir = opts.DIST_DIR if has_volume else opts.BASE_DIR
   image_path = f'{run_dir}/{opts.IMAGE_FILE_NAME}'
   kernel_path = f'{run_dir}/{opts.KERNEL_FILE_NAME}'
-  dtb_path = f'{run_dir}/{opts.DTB_FILE_NAME}'
 
   # Start emulator
   log.info("Starting the emulator ...")

@@ -102,7 +102,6 @@ ENV APP_DIR=/app/
 
 ENV IMAGE_FILE_NAME=distro.qcow2
 ENV KERNEL_FILE_NAME=kernel.img
-ENV DTB_FILE_NAME=pi3.dtb
 
 # Copy build files
 RUN mkdir $BASE_DIR

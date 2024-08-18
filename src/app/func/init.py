@@ -28,8 +28,7 @@ def start(opts):
 
     base_files = [ 
       opts.IMAGE_FILE_NAME,
-      opts.KERNEL_FILE_NAME,
-      opts.DTB_FILE_NAME 
+      opts.KERNEL_FILE_NAME
     ]
     
     # Check and resolve required files for running emulator

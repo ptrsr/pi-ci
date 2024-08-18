@@ -50,7 +50,7 @@ def start(opts):
     -kernel {kernel_path} \
     -dtb {dtb_path} \
     -nographic -no-reboot \
-    -append \"rw console=ttyAMA1,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=1\"
+    -append \"rw console=ttyAMA1,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether\"
     """,
     get_output=False,
     stderr=None if opts.verbose else subprocess.DEVNULL

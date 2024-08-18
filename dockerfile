@@ -67,75 +67,97 @@ COPY src/conf/cmdline.txt /mnt/boot/
 RUN touch /mnt/boot/ssh
 
 # Allow SSH root login with no password
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /mnt/root/etc/ssh/sshd_config \
- && sed -i 's/#PermitEmptyPasswords no/permitEmptyPasswords yes/' /mnt/root/etc/ssh/sshd_config
+# RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /mnt/root/etc/ssh/sshd_config \
+#  && sed -i 's/#PermitEmptyPasswords no/permitEmptyPasswords yes/' /mnt/root/etc/ssh/sshd_config
 
 # Enable root login and remove user 'pi'
-RUN sed -i 's/^root:\*:/root::/' /mnt/root/etc/shadow \
- && sed -i '/^pi/d' /mnt/root/etc/shadow \
- && sed -i '/^pi/d' /mnt/root/etc/passwd \
- && sed -i '/^pi/d' /mnt/root/etc/group \
- && rm -r /mnt/root/home/pi
+# RUN sed -i 's/^root:\*:/root::/' /mnt/root/etc/shadow \
+#  && sed -i '/^pi/d' /mnt/root/etc/shadow \
+#  && sed -i '/^pi/d' /mnt/root/etc/passwd \
+#  && sed -i '/^pi/d' /mnt/root/etc/group \
+#  && rm -r /mnt/root/home/pi
 
 # Setup root auto login
-RUN mkdir /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/
-COPY src/conf/login.conf /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/override.conf
+# RUN mkdir /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/
+# COPY src/conf/login.conf /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.service.d/override.conf
 
-# Create new distro image from modified boot and root
-RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
- && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
- && sfdisk --part-type $BUILD_DIR/distro.img 1 c
-# Convert new distro image to sparse file
-RUN qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2
+# Disable userconfig.service
+RUN rm /mnt/root/usr/lib/systemd/system/userconfig.service \
+ && rm /mnt/root/etc/systemd/system/multi-user.target.wants/userconfig.service
 
-CMD cp $BUILD_DIR/distro.qcow2 ./
+# RUN rm /mnt/root/etc/systemd/system/sysinit.target.wants/systemd-timesyncd.service \
+#  && rm /mnt/root/var/lib/systemd/deb-systemd-helper-enabled/sysinit.target.wants/systemd-timesyncd.service
+
+# RUN ln -rs /mnt/root/usr/lib/systemd/system/serial-getty@.service /mnt/root/usr/lib/systemd/system/getty.target.wants/serial-getty@ttyAMA1.service
+
+COPY src/conf/config.txt /mnt/boot/config.txt
 
 
-# ---------------------------
-FROM ubuntu:24.04 AS emulator
+RUN rm /mnt/root/etc/systemd/system/dev-serial1.device.wants/hciuart.service
 
-# Project build directory
-ARG BUILD_DIR
-# Folder containing default configuration files
-ENV BASE_DIR=/base/
-# Folder containing helper scripts
-ENV APP_DIR=/app/
+ENTRYPOINT bash
 
-ENV IMAGE_FILE_NAME=distro.qcow2
-ENV KERNEL_FILE_NAME=kernel8.img
-ENV DTB_FILE_NAME=pi3.dtb
+# # Default to console instead of graphical user interface
+# RUN ln -f -s \
+#     multi-user.target \
+#     /mnt/root/usr/lib/systemd/system/default.target
 
-# Copy build files
-RUN mkdir $BASE_DIR
-COPY --from=0 $BUILD_DIR/distro.qcow2 $BASE_DIR/$IMAGE_FILE_NAME
-COPY --from=0 /mnt/boot/kernel8.img $BASE_DIR/$KERNEL_FILE_NAME
-COPY --from=0 /mnt/boot/bcm2710-rpi-3-b.dtb $BASE_DIR/$DTB_FILE_NAME
 
-# Install packages and build essentials
-ARG DEBIAN_FRONTEND="noninteractive"
-RUN apt-get update && apt install -y \
-    python3 \
-    python3-pip \
-    qemu-system-arm \
-    linux-image-generic \
-    libguestfs-tools \
-    qemu-efi-aarch64
+# # Create new distro image from modified boot and root
+# RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
+#  && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
+#  && sfdisk --part-type $BUILD_DIR/distro.img 1 c
+# # Convert new distro image to sparse file
+# RUN qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2
 
-ENV PIP_BREAK_SYSTEM_PACKAGES 1
+# CMD cp $BUILD_DIR/distro.qcow2 ./
 
-# Copy requirements first
-COPY src/app/requirements.txt $APP_DIR/requirements.txt
-# Install Python dependencies
-RUN pip3 install -r $APP_DIR/requirements.txt
 
-# Copy helper scripts
-COPY src/app/ $APP_DIR
+# # ---------------------------
+# FROM ubuntu:24.04 AS emulator
 
-# Helper script on running container
-ENTRYPOINT ["/app/run.py"]
+# # Project build directory
+# ARG BUILD_DIR
+# # Folder containing default configuration files
+# ENV BASE_DIR=/base/
+# # Folder containing helper scripts
+# ENV APP_DIR=/app/
 
-# Helper variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV DIST_DIR /dist
-ENV STORAGE_PATH /dev/mmcblk0
-ENV PORT 2222
+# ENV IMAGE_FILE_NAME=distro.qcow2
+# ENV KERNEL_FILE_NAME=kernel8.img
+# ENV DTB_FILE_NAME=pi3.dtb
+
+# # Copy build files
+# RUN mkdir $BASE_DIR
+# COPY --from=0 $BUILD_DIR/distro.qcow2 $BASE_DIR/$IMAGE_FILE_NAME
+# COPY --from=0 /mnt/boot/kernel8.img $BASE_DIR/$KERNEL_FILE_NAME
+# COPY --from=0 /mnt/boot/bcm2710-rpi-3-b.dtb $BASE_DIR/$DTB_FILE_NAME
+
+# # Install packages and build essentials
+# ARG DEBIAN_FRONTEND="noninteractive"
+# RUN apt-get update && apt install -y \
+#     python3 \
+#     python3-pip \
+#     qemu-system-arm \
+#     linux-image-generic \
+#     libguestfs-tools \
+#     qemu-efi-aarch64
+
+# ENV PIP_BREAK_SYSTEM_PACKAGES 1
+
+# # Copy requirements first
+# COPY src/app/requirements.txt $APP_DIR/requirements.txt
+# # Install Python dependencies
+# RUN pip3 install -r $APP_DIR/requirements.txt
+
+# # Copy helper scripts
+# COPY src/app/ $APP_DIR
+
+# # Helper script on running container
+# ENTRYPOINT ["/app/run.py"]
+
+# # Helper variables
+# ENV PYTHONDONTWRITEBYTECODE 1
+# ENV DIST_DIR /dist
+# ENV STORAGE_PATH /dev/mmcblk0
+# ENV PORT 2222

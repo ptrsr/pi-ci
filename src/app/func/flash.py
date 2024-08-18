@@ -37,13 +37,13 @@ def flash(opts):
     True
   )
 
-  filesystem_blocks = int(re.search('Block count: (\d+)', partition_info).group(1))
-  filesystem_block_size = int(re.search('Block size: (\d+)', partition_info).group(1))
+  filesystem_blocks = int(re.search(r'Block count: (\d+)', partition_info).group(1))
+  filesystem_block_size = int(re.search(r'Block size: (\d+)', partition_info).group(1))
 
   filesystem_size = filesystem_blocks * filesystem_block_size
 
   partition_list = run(f'guestfish add {tmp_path} : run : part-list /dev/sda', True)
-  partition_start = int(re.findall('part_start: (\d+)', partition_list)[1])
+  partition_start = int(re.findall(r'part_start: (\d+)', partition_list)[1])
 
   desired_partition_end = partition_start + filesystem_size
 

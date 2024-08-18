@@ -50,7 +50,8 @@ RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/lin
 # Cross compile vm kernel image
 RUN make -C $BUILD_DIR/linux defconfig \
  && make -C $BUILD_DIR/linux kvm_guest.config \
- && make -C $BUILD_DIR/linux/ -j$(nproc) Image
+ && make -C $BUILD_DIR/linux/ -j$(nproc) Image \
+ && mv $BUILD_DIR/linux/arch/arm64/boot/Image $BUILD_DIR/kernel.img
 
 # Copy boot configuration
 COPY src/conf/fstab /mnt/root/etc/
@@ -99,14 +100,14 @@ ENV BASE_DIR=/base/
 # Folder containing helper scripts
 ENV APP_DIR=/app/
 
-ENV IMAGE_FILE_NAME=distro.img
-ENV KERNEL_FILE_NAME=kernel8.img
+ENV IMAGE_FILE_NAME=distro.qcow2
+ENV KERNEL_FILE_NAME=kernel.img
 ENV DTB_FILE_NAME=pi3.dtb
 
 # Copy build files
 RUN mkdir $BASE_DIR
-COPY --from=0 $BUILD_DIR/distro.img $BASE_DIR/$IMAGE_FILE_NAME
-COPY --from=0 $BUILD_DIR/linux/arch/arm64/boot/Image $BASE_DIR/$KERNEL_FILE_NAME
+COPY --from=0 $BUILD_DIR/$IMAGE_FILE_NAME $BASE_DIR/$IMAGE_FILE_NAME
+COPY --from=0 $BUILD_DIR/$KERNEL_FILE_NAME $BASE_DIR/$KERNEL_FILE_NAME
 
 # Install packages and build essentials
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -120,9 +121,8 @@ RUN apt-get update && apt install -y \
 
 ENV PIP_BREAK_SYSTEM_PACKAGES 1
 
-# Copy requirements first
+# Copy and install Python dependencies
 COPY src/app/requirements.txt $APP_DIR/requirements.txt
-# Install Python dependencies
 RUN pip3 install -r $APP_DIR/requirements.txt
 
 # Copy helper scripts

@@ -9,7 +9,7 @@ class Size():
 
 def get_partition_size(image_path: str):
   part_list = run(f'guestfish add {image_path} : run : part-list /dev/sda', True)
-  part_ends = re.findall('part_end: (\d+)', part_list)
+  part_ends = re.findall(r'part_end: (\d+)', part_list)
   return int(part_ends[len(part_ends) - 1]) + 1 # - Size.BLOCK
 
 
@@ -19,4 +19,4 @@ def get_device_size(device_path: str):
 
 def get_virtual_size(image_path: str):
   image_info = run(f'qemu-img info {image_path}', True)
-  return int(re.search('virtual size.+\((\d+) bytes', image_info).group(1))
+  return int(re.search(r'virtual size.+\((\d+) bytes', image_info).group(1))

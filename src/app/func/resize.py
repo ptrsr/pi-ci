@@ -73,7 +73,7 @@ def parse_size(input: str) -> int:
     return get_device_size(input)
 
   try:
-    (size, unit) = re.search('^(\d+)([a-z,A-Z])?$', input).group(1, 2)
+    (size, unit) = re.search(r'^(\d+)([a-z,A-Z])?$', input).group(1, 2)
   except:
     raise RuntimeError("Invalid target device or size. For help, run PI-CI with 'resize -h'.")
 

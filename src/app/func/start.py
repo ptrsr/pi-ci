@@ -45,20 +45,19 @@ def start(opts):
     qemu-system-aarch64 \
     -machine virt \
     -cpu cortex-a72 \
-    -m 1G \
+    -m 2G \
     -smp 4 \
-    -drive file={image_path},format=raw,id=hd0,if=none,cache=writeback \
-    -device virtio-blk,drive=hd0,bootindex=0 \
     -kernel {kernel_path} \
-    -nographic -no-reboot \
-    -append \"rw console=ttyAMA0,115200 root=/dev/vda2 rootfstype=ext4 rootdelay=1 loglevel=2\"
+    -append \"rw console=ttyAMA0 root=/dev/vda2 rootfstype=ext4 rootdelay=1 loglevel=2\" \
+    -drive file={image_path},format=qcow2,id=hd0,if=none,cache=writeback \
+    -device virtio-blk,drive=hd0,bootindex=0 \
+    -netdev user,id=mynet,hostfwd=tcp::2222-:22 \
+    -device virtio-net-pci,netdev=mynet \
+    -nographic -no-reboot
     """,
     get_output=False,
     stderr=None if opts.verbose else subprocess.DEVNULL
   )
-  # TODO: re-enable ethernet module
-  # -append \"rw console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootdelay=1 loglevel=2 modules-load=dwc2,g_ether\"
-
 
 # Start command parser
 def start_parser(parsers, parent_parser, get_usage, env):

@@ -47,10 +47,11 @@ RUN mkdir /mnt/root /mnt/boot \
 # Clone the RPI kernel repo
 RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
 
+# Insert kernel configuration
+COPY src/conf/.config $BUILD_DIR/linux
+
 # Cross compile vm kernel image
-RUN make -C $BUILD_DIR/linux defconfig \
- && make -C $BUILD_DIR/linux kvm_guest.config \
- && make -C $BUILD_DIR/linux/ -j$(nproc) Image \
+RUN make -C $BUILD_DIR/linux -j$(nproc) Image \
  && mv $BUILD_DIR/linux/arch/arm64/boot/Image $BUILD_DIR/kernel.img
 
 # Copy boot configuration

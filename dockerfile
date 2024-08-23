@@ -1,40 +1,36 @@
 # PI-CI
-# Shared variables
-ARG BUILD_DIR=/build/
-
-FROM ubuntu:24.04 AS builder
-
-# Use shared build directory
-ARG BUILD_DIR
-
 # Kernel source
-ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
 ARG KERNEL_BRANCH=rpi-6.6.y
+ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
 
-# Distro download
-ARG DISTRO_FILE=2024-07-04-raspios-bookworm-arm64-lite.img
-ARG DISTRO_IMG=https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-07-04/$DISTRO_FILE.xz
+# Distro source
+ARG DISTRO_DATE=2024-07-04
+ARG DISTRO_FILE=$DISTRO_DATE-raspios-bookworm-arm64-lite.img
+ARG DISTRO_IMG=https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-$DISTRO_DATE/$DISTRO_FILE.xz
 
-# Kernel compile options
-ARG ARCH=arm64
-ARG CROSS_COMPILE=aarch64-linux-gnu-
+# Default directory and file names
+ARG BUILD_DIR=/build/
+ARG BASE_DIR=/base/
+ARG APP_DIR=/app/
+
+ARG IMAGE_FILE_NAME=distro.qcow2
+ARG KERNEL_FILE_NAME=kernel.img
+
+# --------------------------------
+FROM ubuntu:24.04 AS image-builder
 
 # Install dependencies
 ARG DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update && apt install -y \
-    bc \
-    bison \
-    crossbuild-essential-arm64 \
-    flex \
-    git \
-    libc6-dev \
     libguestfs-tools \
     libssl-dev \
-    linux-image-generic \
-    make \
     wget \
     openssl \
+    linux-image-generic \
     xz-utils
+
+ARG DISTRO_FILE
+ARG DISTRO_IMG
 
 # Download raspbian distro
 RUN wget -nv -O /tmp/$DISTRO_FILE.xz $DISTRO_IMG \
@@ -43,16 +39,6 @@ RUN wget -nv -O /tmp/$DISTRO_FILE.xz $DISTRO_IMG \
 # Extract distro boot and root
 RUN mkdir /mnt/root /mnt/boot \
  && guestfish add tmp/$DISTRO_FILE : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root
-
-# Clone the RPI kernel repo
-RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
-
-# Insert kernel configuration
-COPY src/conf/.config $BUILD_DIR/linux
-
-# Cross compile vm kernel image
-RUN make -C $BUILD_DIR/linux -j$(nproc) Image \
- && mv $BUILD_DIR/linux/arch/arm64/boot/Image $BUILD_DIR/kernel.img
 
 # Copy boot configuration
 COPY src/conf/fstab /mnt/root/etc/
@@ -81,7 +67,9 @@ COPY src/conf/login.conf /mnt/root/etc/systemd/system/serial-getty@ttyAMA0.servi
 RUN rm /mnt/root/usr/lib/systemd/system/userconfig.service \
  && rm /mnt/root/etc/systemd/system/multi-user.target.wants/userconfig.service
 
-# Create new distro image from modified boot and root
+ # Create new distro image from modified boot and root
+ARG BUILD_DIR
+RUN mkdir $BUILD_DIR
 RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
  && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
  && sfdisk --part-type $BUILD_DIR/distro.img 1 c
@@ -91,23 +79,45 @@ RUN qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qco
 CMD cp $BUILD_DIR/distro.qcow2 ./
 
 
+# ---------------------------------
+FROM ubuntu:24.04 AS kernel-builder
+
+# Install dependencies
+ARG DEBIAN_FRONTEND="noninteractive"
+RUN apt-get update && apt install -y \
+    bc \
+    bison \
+    crossbuild-essential-arm64 \
+    flex \
+    git \
+    libssl-dev \
+    linux-image-generic \
+    make
+
+ARG KERNEL_GIT
+ARG KERNEL_BRANCH
+ARG BUILD_DIR
+
+# Clone the RPI kernel repo
+RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
+
+# Kernel compile options
+ARG ARCH=arm64
+ARG CROSS_COMPILE=aarch64-linux-gnu-
+
+# Compile default VM guest image
+RUN make -C $BUILD_DIR/linux defconfig kvm_guest.config \
+ && make -C $BUILD_DIR/linux -j$(nproc) Image
+
+# Customize guest image
+COPY src/conf/custom.conf $BUILD_DIR/linux/kernel/configs/custom.config
+RUN make -C $BUILD_DIR/linux custom.config \
+ && make -C $BUILD_DIR/linux -j$(nproc) Image \
+ && mv $BUILD_DIR/linux/arch/arm64/boot/Image $BUILD_DIR/kernel.img
+
+
 # ---------------------------
 FROM ubuntu:24.04 AS emulator
-
-# Project build directory
-ARG BUILD_DIR
-# Folder containing default configuration files
-ENV BASE_DIR=/base/
-# Folder containing helper scripts
-ENV APP_DIR=/app/
-
-ENV IMAGE_FILE_NAME=distro.qcow2
-ENV KERNEL_FILE_NAME=kernel.img
-
-# Copy build files
-RUN mkdir $BASE_DIR
-COPY --from=0 $BUILD_DIR/$IMAGE_FILE_NAME $BASE_DIR/$IMAGE_FILE_NAME
-COPY --from=0 $BUILD_DIR/$KERNEL_FILE_NAME $BASE_DIR/$KERNEL_FILE_NAME
 
 # Install packages and build essentials
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -119,7 +129,9 @@ RUN apt-get update && apt install -y \
     libguestfs-tools \
     qemu-efi-aarch64
 
+
 ENV PIP_BREAK_SYSTEM_PACKAGES 1
+ARG APP_DIR
 
 # Copy and install Python dependencies
 COPY src/app/requirements.txt $APP_DIR/requirements.txt
@@ -127,6 +139,18 @@ RUN pip3 install -r $APP_DIR/requirements.txt
 
 # Copy helper scripts
 COPY src/app/ $APP_DIR
+
+# Copy build files
+ARG BASE_DIR
+ARG BUILD_DIR
+
+ARG IMAGE_FILE_NAME
+ARG KERNEL_FILE_NAME
+
+RUN mkdir $BASE_DIR
+
+COPY --from=image-builder $BUILD_DIR/$IMAGE_FILE_NAME $BASE_DIR/$IMAGE_FILE_NAME
+COPY --from=kernel-builder $BUILD_DIR/$KERNEL_FILE_NAME $BASE_DIR/$KERNEL_FILE_NAME
 
 # Helper script on running container
 ENTRYPOINT ["/app/run.py"]
@@ -136,3 +160,8 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV DIST_DIR /dist
 ENV STORAGE_PATH /dev/mmcblk0
 ENV PORT 2222
+
+ENV BASE_DIR $BASE_DIR
+ENV APP_DIR $APP_DIR
+ENV IMAGE_FILE_NAME $IMAGE_FILE_NAME
+ENV KERNEL_FILE_NAME $KERNEL_FILE_NAME

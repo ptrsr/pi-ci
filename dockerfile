@@ -76,8 +76,6 @@ RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
 # Convert new distro image to sparse file
 RUN qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2
 
-CMD cp $BUILD_DIR/distro.qcow2 ./
-
 
 # ---------------------------------
 FROM ubuntu:24.04 AS kernel-builder

@@ -1,80 +1,81 @@
-name: PI-CI
+name: BIOMI-RPI
 
 on:
   push:
     branches:
       - '**'
+
 env:
-  IMAGE_NAME: ptrsr/pi-ci
+  IMAGE_NAME: ghcr.io/PRISMProtocolHub/biomi-rpi
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Free up disk space on github runner
+      - name: Free up disk space on GitHub runner
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: false
-          # android: false
-          # dotnet: false
-          # haskell: false
-          # large-packages: false
-          # swap-storage: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache register
+      - name: Cache Docker image
         id: cache
         uses: actions/cache@v4
         with:
           path: /tmp/image.tar
-          key: ${{ hashFiles('dockerfile') }}
+          key: ${{ hashFiles('Dockerfile') }}
 
       - name: Set up Docker Buildx
-        id: buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Build Docker image
         run: |
           docker buildx build \
-            -t ${{ env.IMAGE_NAME }} \
+            --platform linux/arm64 \
+            -t ${{ env.IMAGE_NAME }}:latest \
             -o type=docker,dest=- \
             . > /tmp/image.tar
 
   test:
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     outputs:
       publish: ${{ steps.check.outputs.publish }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache register
-        id: cache
+      - name: Cache Docker image
         uses: actions/cache@v4
         with:
           path: /tmp/image.tar
-          key: ${{ hashFiles('dockerfile') }}
+          key: ${{ hashFiles('Dockerfile') }}
 
       - name: Load Docker image
         run: docker load -i /tmp/image.tar
 
       - name: Install dependencies
         run: |
-          sudo apt-get install ansible
-          pip3 install docker-py
+          sudo apt-get update
+          sudo apt-get install -y ansible
+          pip3 install docker
         env:
           PIP_BREAK_SYSTEM_PACKAGES: 1
 
-      - name: Run test
+      - name: Run tests
         run: |
           ansible-playbook \
-          -i test/hosts.yml \
-          test/main.yml
+            -i test/hosts.yml \
+            test/main.yml
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: config
           path: dist
@@ -90,8 +91,7 @@ jobs:
   publish:
     if: needs.test.outputs.publish == 'true'
     needs: test
-    runs-on: ubuntu-24.04
-    environment: docker-hub
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,24 +101,24 @@ jobs:
           git fetch --tags
           echo "TAG=$(git tag --contains HEAD)" >> $GITHUB_ENV
 
-      - name: Cache register
-        id: cache
+      - name: Cache Docker image
         uses: actions/cache@v4
         with:
           path: /tmp/image.tar
-          key: ${{ hashFiles('dockerfile') }}
+          key: ${{ hashFiles('Dockerfile') }}
 
       - name: Load Docker image
         run: docker load -i /tmp/image.tar
 
-      - name: Tag docker image
+      - name: Tag Docker image
         run: docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${{ env.TAG }}
 
-      - name: Log in to Docker Hub
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push to Docker Hub
-        run: docker push -a ${{ env.IMAGE_NAME }}
+      - name: Push to GitHub Container Registry
+        run: docker push ${{ env.IMAGE_NAME }}:${{ env.TAG }}

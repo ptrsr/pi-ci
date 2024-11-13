@@ -156,7 +156,7 @@ RUN make -C $BUILD_DIR/linux custom.config \
     && mv $BUILD_DIR/linux/arch/arm64/boot/Image $BUILD_DIR/kernel.img \
     && rm -rf $BUILD_DIR/linux
 
- Final stage
+# Final stage
 FROM base-deps AS emulator
 ARG APP_DIR
 ARG BASE_DIR

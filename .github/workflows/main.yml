@@ -40,8 +40,6 @@ jobs:
             --platform linux/arm64 \
             -t ${{ env.IMAGE_NAME }}:latest \
             -o type=docker,dest=- \
-            --cache-from=type=gha \
-            --cache-to=type=gha,mode=max \
             . > /tmp/image.tar
 
   test:

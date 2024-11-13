@@ -6,7 +6,6 @@ on:
       - '**'
 
 env:
-  BASE_IMAGE_NAME: ghcr.io/PRISMProtocolHub/biomi-rpi-base
   IMAGE_NAME: ghcr.io/PRISMProtocolHub/biomi-rpi
 
 permissions:

@@ -68,11 +68,7 @@ RUN wget -nv -O $DISTRO_FILE.xz $DISTRO_IMG \
     && mkdir -p /mnt/root /mnt/boot
 
 # Extract and modify system
-#RUN guestfish add $DISTRO_FILE : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root \
-#    && rm $DISTRO_FILE
-
-RUN virt-customize -a $DISTRO_FILE \
-    --run-command 'echo "Customized with virt-customize" > /etc/issue' \
+RUN guestfish add $DISTRO_FILE : run : mount /dev/sda1 / : copy-out / /mnt/boot : umount / : mount /dev/sda2 / : copy-out / /mnt/root \
     && rm $DISTRO_FILE
 
 # Copy configurations and modify system settings
@@ -95,32 +91,11 @@ RUN touch /mnt/boot/ssh \
 WORKDIR $BUILD_DIR
 ARG DIST_IMAGE_PATH=$BUILD_DIR/distro.img
 
-# Set the libguestfs backend to operate in Docker
-ENV LIBGUESTFS_BACKEND_SETTINGS=force_tcg
-
-# Create an initial image with a boot partition (vfat) and a root partition (ext4) using virt-make-fs
-RUN virt-make-fs --partition --type=vfat,ext4 /mnt/boot,$(du -sh /mnt/root | cut -f1) $DIST_IMAGE_PATH
-
-# Add files to the boot partition using virt-copy-in
-RUN virt-copy-in -a $DIST_IMAGE_PATH /mnt/boot/* /boot
-
-# Add files to the root partition using virt-copy-in
-RUN virt-copy-in -a $DIST_IMAGE_PATH /mnt/root/* /
-
-# Change the partition type to FAT32 (type 'c' is LBA for FAT32)
-RUN echo ",,c,*" | sfdisk --no-reread $DIST_IMAGE_PATH
-
-# Convert the raw image format to qcow2 using qemu-img
-RUN qemu-img convert -f raw -O qcow2 $DIST_IMAGE_PATH $BUILD_DIR/distro.qcow2
-
-# Delete the raw image after conversion to free up space
-RUN rm $DIST_IMAGE_PATH
-
-#RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
-#    && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
-#    && sfdisk --part-type $BUILD_DIR/distro.img 1 c \
-#    && qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2 \
-#    && rm $BUILD_DIR/distro.img
+RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
+    && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
+    && sfdisk --part-type $BUILD_DIR/distro.img 1 c \
+    && qemu-img convert -f raw -O qcow2 $BUILD_DIR/distro.img $BUILD_DIR/distro.qcow2 \
+    && rm $BUILD_DIR/distro.img
 
 # Kernel building stage
 FROM base-deps AS kernel-builder

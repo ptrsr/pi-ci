@@ -34,13 +34,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
+      - name: Restore Docker buildx cache
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
+          key: ${{ runner.os }}-docker-buildx-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-docker-
+            ${{ runner.os }}-docker-buildx-
 
       - name: Build Docker image
         run: |
@@ -48,10 +48,17 @@ jobs:
             --platform linux/arm64 \
             -t ${{ env.IMAGE_NAME }}:latest \
             -o type=docker,dest=- \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
             . > /tmp/image.tar
+
+      - name: Cache Docker buildx layers
+        uses: actions/cache@v3
         with:
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-buildx-
 
   test:
     needs: build

@@ -1,8 +1,10 @@
-# PI-CI [![PI-CI](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/ptrsr/pi-ci/actions/workflows/main.yml)
-A raspberry Pi emulator in a [Docker image](https://hub.docker.com/r/ptrsr/pi-ci) that lets developers easily prepare and flash RPi configurations.
+# Biomi-RPi [![Biomi-RPi](https://github.com/prismprotocolhub/biomi-rpi/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/prismprotocolhub/biomi-rpi/actions/workflows/main.yml)
+A raspberry Pi emulator in a [Docker image](https://ghcr.io/prismprotocolhub/biomi-rpi) that allow developers to develop for the Biomi firmware, prepare Biomi OS images to be flashed.
+
+It has been forked from the https://github.com/ptrsr/pi-ci project, thanks to them! It has been optimized and re-architectured to optimize image caching, CI and Docker layers.
 
 ## Overview
-The PI-CI project enables developers to easily:
+The Biomi-RPi project enables developers to easily:
 - Run a RPi VM.
 - Prepare a configuration inside a RPi VM.
 - Flash a RPi VM image to a physical SD card.
@@ -14,7 +16,7 @@ Example use cases:
 - Test ARM applications in a virtualized environment.
 
 Key features:
-- Pi 3, 4 and **5** support
+- Pi 2 zero (or 3, 4 and **5**) support
 - 64 bit (ARMv8) Raspberry PI OS (24.04, Bookworm) included
   - Image: **[2024-07-04-raspios-bookworm-arm64-lite](https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-07-04/)**
   - Kernel: **[6.6-y](https://github.com/raspberrypi/linux/tree/rpi-6.6.y)**
@@ -25,12 +27,12 @@ Key features:
 
 ## Usage
 ```sh
-$ docker pull ptrsr/pi-ci
-$ docker run --rm -it ptrsr/pi-ci
+$ docker pull ghcr.io/prismprotocolhub/biomi-rpi
+$ docker run --rm -it ghcr.io/prismprotocolhub/biomi-rpi
 
-> usage: docker run [docker args] ptrsr/pi-ci [command] [optional args]
+> usage: docker run [docker args] ghcr.io/prismprotocolhub/biomi-rpi [command] [optional args]
 > 
-> PI-CI: the reproducible PI emulator.
+> Biomi-RPi: the reproducible Biomi Raspberry Pi emulator.
 > 
 > positional arguments:
 >   command     [init, start, resize, flash, export]
@@ -39,22 +41,22 @@ $ docker run --rm -it ptrsr/pi-ci
 >   -h, --help  show this help message and exit
 >   -v          show verbose output
 > 
-> Refer to https://github.com/ptrsr/pi-ci for the full README on how to use this program.
+> Refer to https://github.com/prismprotocolhub/biomi-rpi for the full README on how to use this program.
 ```
 Each command has a help message, for example: 
-`docker run --rm -it ptrsr/pi-ci start -h`.
+`docker run --rm -it ghcr.io/prismprotocolhub/biomi-rpi start -h`.
 
 ## Start machine
-Simply run a `ptrsr/pi-ci` container with the start command:
+Simply run a `ghcr.io/prismprotocolhub/biomi-rpi` container with the start command:
 ```sh
-docker run --rm -it ptrsr/pi-ci start
+docker run --rm -it ghcr.io/prismprotocolhub/biomi-rpi start
 ```
 The emulator will automatically log into `root`.
 
 ## Persistence
 To save the resulting image, use a bind mount to `/dist`:
 ```sh
-docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci start
+docker run --rm -it -v $PWD/dist:/dist ghcr.io/prismprotocolhub/biomi-rpi start
 ```
 **NOTE**: this example will create and mount the `dist` folder in the current working directory of the host.
 
@@ -63,7 +65,7 @@ To restart the image, simply use the same bind mount.
 ## SSH access
 To enable ssh access, run the container with port **2222** exposed.
 ```sh
-docker run --rm -p 2222:2222 ptrsr/pi-ci start
+docker run --rm -p 2222:2222 ghcr.io/prismprotocolhub/biomi-rpi start
 ```
 
 Then ssh into the virtual Pi:
@@ -80,7 +82,7 @@ The default image is 2 gigabytes in size. This can be increased (but **not decre
 For an image to be flashed to a device, the image has to be the less or equal to the device size.
 
 ```sh
-docker run --rm -it -v $PWD/dist:/dist --device=/dev/mmcblk0 ptrsr/pi-ci resize /dev/mmcblk0
+docker run --rm -it -v $PWD/dist:/dist --device=/dev/mmcblk0 ghcr.io/prismprotocolhub/biomi-rpi resize /dev/mmcblk0
 ```
 
 **NOTE**: although an SD card will say a specific size (such as 16GB), the device is usually if not always smaller (GB vs GiB). Therefore, using a target device is recommended.
@@ -90,14 +92,14 @@ docker run --rm -it -v $PWD/dist:/dist --device=/dev/mmcblk0 ptrsr/pi-ci resize 
 ## Flash 
 To flash the prepared image to a storage device (such as an SD card), provide the container with the device and run the flash command:
 ```sh
-docker run --rm -it -v $PWD/dist:/dist --device=/dev/mmcblk0 ptrsr/pi-ci flash /dev/mmcblk0
+docker run --rm -it -v $PWD/dist:/dist --device=/dev/mmcblk0 ghcr.io/prismprotocolhub/biomi-rpi flash /dev/mmcblk0
 ```
 On the first boot of the real RPi, a program will automatically inflate the root partition to fill the rest of the target device.
 
 ## Export
 The export function converts the virtual (`.qcow2`) image to a raw (`.img`) image. This is particularly handy when it is not possible to directly flash an image (e.g. when using WSL), as the raw image can be flashed using tools like [Balena Etcher](https://www.balena.io/etcher). The export command takes two optional arguments; the `--input` and `--output` path;
 ```sh
-docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci export --input /dist/image.qcow2 --output /dist/image.img
+docker run --rm -it -v $PWD/dist:/dist ghcr.io/prismprotocolhub/biomi-rpi export --input /dist/image.qcow2 --output /dist/image.img
 ```
 The raw image should pop up alongside the virtual image in the mounted `dist` folder in the example above.
 

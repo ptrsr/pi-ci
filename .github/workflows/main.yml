@@ -3,7 +3,8 @@ name: BIOMI-RPI
 on:
   push:
     branches:
-      - 'main'
+      #- 'main'
+      - '**'
 env:
   IMAGE_NAME: ghcr.io/prismprotocolhub/biomi-rpi
 

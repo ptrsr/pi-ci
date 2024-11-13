@@ -3,8 +3,7 @@ name: BIOMI-RPI
 on:
   push:
     branches:
-      - '**'
-
+      - 'main'
 env:
   IMAGE_NAME: ghcr.io/prismprotocolhub/biomi-rpi
 
@@ -34,6 +33,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+
       - name: Build Docker image
         run: |
           docker buildx build \
@@ -41,6 +48,9 @@ jobs:
             -t ${{ env.IMAGE_NAME }}:latest \
             -o type=docker,dest=- \
             . > /tmp/image.tar
+        with:
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
 
   test:
     needs: build

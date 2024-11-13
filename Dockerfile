@@ -18,6 +18,29 @@ ARG DISTRO_NAME=bullseye
 ARG DISTRO_FILE=$DISTRO_DATE-raspios-$DISTRO_NAME-arm64-lite.img
 ARG DISTRO_IMG=https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-$DISTRO_DATE_FOLDER/$DISTRO_FILE.xz
 
+# Base Docker image for all the steps of the project
+FROM --platform=linux/arm64 debian:latest AS base-deps
+ARG DEBIAN_FRONTEND
+
+# Optimize APT for faster downloads
+RUN echo 'Acquire::http::Pipeline-Depth "5";' > /etc/apt/apt.conf.d/99parallel \
+    && echo 'Acquire::Languages "none";' > /etc/apt/apt.conf.d/99languages \
+    && echo 'path-exclude=/usr/share/doc/*\npath-exclude=/usr/share/man/*\npath-exclude=/usr/share/locale/*' > /etc/dpkg/dpkg.cfg.d/01_nodoc
+
+# Install common dependencies
+RUN apt-get update && apt-get install -y  \
+    linux-image-generic \
+    libguestfs-tools \
+    libssl-dev \
+    kmod \
+    wget \
+    openssl \
+    xz-utils \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/share/doc/* \
+    && rm -rf /usr/share/man/* \
+    && rm -rf /usr/share/locale/*
+
 #========= Image building stage
 # Create the raspberry OS image for SDCard using x86_64 platform that is faster
 FROM base-deps AS image-builder

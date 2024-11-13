@@ -13,7 +13,7 @@ from func.flash import flash_parser
 from func.export import export_parser
 
 
-# Use environment variables (defaults given in dockerfile)
+# Use environment variables (defaults given in Dockerfile)
 env = get_env()
 
 # Help text

@@ -6,7 +6,7 @@ on:
       - '**'
 
 env:
-  IMAGE_NAME: ghcr.io/PRISMProtocolHub/biomi-rpi
+  IMAGE_NAME: ghcr.io/prismprotocolhub/biomi-rpi
 
 permissions:
   contents: read

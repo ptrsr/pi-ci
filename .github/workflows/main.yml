@@ -57,8 +57,6 @@ jobs:
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-docker-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-docker-buildx-
 
   test:
     needs: build

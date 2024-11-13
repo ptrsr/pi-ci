@@ -49,18 +49,6 @@ ARG BUILD_DIR
 ARG DISTRO_FILE
 ARG DISTRO_IMG
 
-RUN apt-get update && apt-get install -y  \
-    libguestfs-tools \
-    libssl-dev \
-    wget \
-    openssl \
-    linux-image-generic \
-    xz-utils \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /usr/share/doc/* \
-    && rm -rf /usr/share/man/* \
-    && rm -rf /usr/share/locale/*
-
 # Download and extract image
 WORKDIR /tmp
 RUN wget -nv -O $DISTRO_FILE.xz $DISTRO_IMG \
@@ -106,12 +94,14 @@ ARG KERNEL_BRANCH
 # Install kernel build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bc \
+    ca-certificates \
     gcc \
     bison \
     crossbuild-essential-arm64 \
     flex \
     git \
     make \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR $BUILD_DIR

@@ -41,10 +41,10 @@ def start(opts):
   log.info("Starting the emulator ...")
   run(f"""
     qemu-system-aarch64 \
-    -machine virt \
-    -cpu cortex-a72 \
-    -m 2G \
-    -smp 4 \
+    -machine {opts.MACHINE_TYPE} \
+    -cpu {opts.CPU_TYPE} \
+    -m {opts.RAM_SIZE} \
+    -smp {opts.CPU_NUMBER} \
     -kernel {kernel_path} \
     -append \"rw console=ttyAMA0 root=/dev/vda2 rootfstype=ext4 rootdelay=1 loglevel=2\" \
     -drive file={image_path},format=qcow2,id=hd0,if=none,cache=writeback \

@@ -21,7 +21,7 @@ ARG DISTRO_TAG=$DISTRO_NAME-$DISTRO_DATE
 FROM ghcr.io/prismprotocolhub/biomi-rpi-image-builder:$DISTRO_TAG AS image-builder
 
 # Kernel building stage
-FROM ghcr.io/prismprotocolhub/biomi-rpi-kernel-builder:$KERNEL_BRANCH as kernel-builder
+FROM ghcr.io/prismprotocolhub/biomi-rpi-kernel-builder:$KERNEL_BRANCH AS kernel-builder
 
 # Final stage
 FROM debian:latest AS emulator

@@ -118,9 +118,6 @@ jobs:
         run: docker load -i /tmp/image.tar
 
       - name: Tag Docker image
-        run: docker tag ${{ env.BASE_IMAGE_NAME }}:latest ${{ env.BASE_IMAGE_NAME }}:${{ env.TAG }}
-
-      - name: Tag Docker image
         run: docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${{ env.TAG }}
 
       - name: Log in to GitHub Container Registry
@@ -130,8 +127,5 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push to GitHub Container Registry
-        run: docker push ${{ env.BASE_IMAGE_NAME }}:${{ env.TAG }}
-          
       - name: Push to GitHub Container Registry
         run: docker push ${{ env.IMAGE_NAME }}:${{ env.TAG }}

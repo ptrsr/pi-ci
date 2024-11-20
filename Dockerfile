@@ -25,6 +25,7 @@ FROM ghcr.io/prismprotocolhub/biomi-rpi-kernel-builder:$KERNEL_BRANCH AS kernel-
 
 # Final stage
 FROM debian:latest AS emulator
+ARG APP_DIR=/app
 
 # Qemu rpi emulation details
 ARG MACHINE_TYPE=virt

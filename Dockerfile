@@ -50,7 +50,7 @@ RUN echo 'Acquire::http::Pipeline-Depth "5";' > /etc/apt/apt.conf.d/99parallel \
     && echo 'path-exclude=/usr/share/doc/*\npath-exclude=/usr/share/man/*\npath-exclude=/usr/share/locale/*' > /etc/dpkg/dpkg.cfg.d/01_nodoc
 
 # Install dependencies
-RUN apt-get update && apt-get install -y  \
+RUN apt-get update && apt-get install -y --no-install-recommends  \
     python3 \
     python3-pip \
     qemu-system-aarch64 \
@@ -62,6 +62,7 @@ RUN apt-get update && apt-get install -y  \
     wget \
     openssl \
     xz-utils \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /usr/share/doc/* \
     && rm -rf /usr/share/man/* \

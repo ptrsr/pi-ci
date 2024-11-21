@@ -38,7 +38,14 @@ def start(opts):
   kernel_path = f'{run_dir}/{opts.KERNEL_FILE_NAME}'
 
   # Start emulator
-  log.info("Starting the emulator ...")
+  log.info("# Starting the emulator ...")
+  log.info(f""" Using:
+    - kernel {kernel_path}
+    - image {image_path}
+    - machine type {opts.MACHINE_TYPE}
+    - {opts.CPU_TYPE} cpus
+    - {opts.RAM_SIZE} RAM
+  """,)
   run(f"""
     qemu-system-aarch64 \
     -machine {opts.MACHINE_TYPE} \

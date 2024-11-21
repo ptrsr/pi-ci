@@ -1,15 +1,9 @@
 # PI-CI
 # Global arguments
 ARG DEBIAN_FRONTEND="noninteractive"
-ARG BUILD_DIR=/build
-ARG BASE_DIR=/base
-ARG APP_DIR=/app
-ARG IMAGE_FILE_NAME=distro.qcow2
-ARG KERNEL_FILE_NAME=kernel.img
 
 # Kernel source
 ARG KERNEL_BRANCH=rpi-6.1.y
-ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
 
 # Distro source
 ARG DISTRO_DATE=2022-09-22
@@ -25,7 +19,22 @@ FROM ghcr.io/prismprotocolhub/biomi-rpi-kernel-builder:$KERNEL_BRANCH AS kernel-
 
 # Final stage
 FROM debian:latest AS emulator
+ARG DEBIAN_FRONTEND="noninteractive"
+ARG BUILD_DIR=/build
+ARG BASE_DIR=/base
 ARG APP_DIR=/app
+ARG IMAGE_FILE_NAME=raspios.qcow2
+ARG IMAGE_FILE_NAME_COMPRESSED=$IMAGE_FILE_NAME.gz
+ARG KERNEL_FILE_NAME=kernel.img
+
+# Kernel source
+ARG KERNEL_BRANCH=rpi-6.1.y
+ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
+
+# Distro source
+ARG DISTRO_DATE=2022-09-22
+ARG DISTRO_NAME=bullseye
+ARG DISTRO_TAG=$DISTRO_NAME-$DISTRO_DATE
 
 # Qemu rpi emulation details
 ARG MACHINE_TYPE=virt
@@ -44,6 +53,7 @@ RUN echo 'Acquire::http::Pipeline-Depth "5";' > /etc/apt/apt.conf.d/99parallel \
 RUN apt-get update && apt-get install -y  \
     python3 \
     python3-pip \
+    qemu-system-aarch64 \
     qemu-efi-aarch64 \
     linux-image-generic \
     libguestfs-tools \
@@ -72,17 +82,20 @@ ENV PIP_BREAK_SYSTEM_PACKAGES=1 \
     IMAGE_FILE_NAME=$IMAGE_FILE_NAME \
     KERNEL_FILE_NAME=$KERNEL_FILE_NAME
 
-# Install Python dependencies
-COPY src/app/requirements.txt $APP_DIR/
-RUN pip3 install --no-cache-dir -r $APP_DIR/requirements.txt
+WORKDIR $DIST_DIR
 
 # Copy application files
 COPY src/app/ $APP_DIR/
 
-WORKDIR $BASE_DIR
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -r $APP_DIR/requirements.txt
 
 # Copy artifacts from previous stages
-COPY --from=image-builder $BUILD_DIR/$IMAGE_FILE_NAME $BASE_DIR/
-COPY --from=kernel-builder $BUILD_DIR/$KERNEL_FILE_NAME $BASE_DIR/
+COPY --from=image-builder $BUILD_DIR/$IMAGE_FILE_NAME_COMPRESSED $DIST_DIR/
+COPY --from=kernel-builder $BUILD_DIR/$KERNEL_FILE_NAME $DIST_DIR/
+
+RUN gunzip $DIST_DIR/$IMAGE_FILE_NAME_COMPRESSED
+
+EXPOSE 2222
 
 ENTRYPOINT ["/app/run.py"]

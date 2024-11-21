@@ -41,13 +41,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: |
-          docker buildx build \
-            --platform linux/arm64 \
-            -t ${{ env.IMAGE_NAME }}:latest \
-            -o type=docker,dest=- \
-            . > /tmp/image.tar
+      - name: Build Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          push: false
+          platforms: |
+            linux/amd64
+            linux/arm64
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Save Docker image
+        run: docker save -o biomi-rpi.tar biomi-rpi:${{ github.sha }}
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-image
+          path: biomi-rpi.tar
 
   test:
     needs: build
@@ -115,7 +126,7 @@ jobs:
           key: ${{ hashFiles('Dockerfile') }}
 
       - name: Load Docker image
-        run: docker load -i /tmp/image.tar
+        run: docker load -i biomi-rpi.tar
 
       - name: Tag Docker image
         run: docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${{ env.TAG }}

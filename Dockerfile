@@ -1,35 +1,17 @@
-# PI-CI
+# BIOMI-RPI
+FROM debian:latest
 # Global arguments
 ARG DEBIAN_FRONTEND="noninteractive"
 
 # Kernel source
 ARG KERNEL_BRANCH=rpi-6.1.y
 
-# Distro source
-ARG DISTRO_DATE=2022-09-22
-ARG DISTRO_NAME=bullseye
-ARG DISTRO_TAG=$DISTRO_NAME-$DISTRO_DATE
-
-#========= Image building stage
-# Create the raspberry OS image for SDCard using x86_64 platform that is faster
-FROM ghcr.io/prismprotocolhub/biomi-rpi-image-builder:$DISTRO_TAG AS image-builder
-
-# Kernel building stage
-FROM ghcr.io/prismprotocolhub/biomi-rpi-kernel-builder:$KERNEL_BRANCH AS kernel-builder
-
-# Final stage
-FROM debian:latest AS emulator
-ARG DEBIAN_FRONTEND="noninteractive"
 ARG BUILD_DIR=/build
 ARG BASE_DIR=/base
 ARG APP_DIR=/app
 ARG IMAGE_FILE_NAME=raspios.qcow2
 ARG IMAGE_FILE_NAME_COMPRESSED=$IMAGE_FILE_NAME.gz
 ARG KERNEL_FILE_NAME=kernel.img
-
-# Kernel source
-ARG KERNEL_BRANCH=rpi-6.1.y
-ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
 
 # Distro source
 ARG DISTRO_DATE=2022-09-22
@@ -91,11 +73,14 @@ COPY src/app/ $APP_DIR/
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r $APP_DIR/requirements.txt
 
-# Copy artifacts from previous stages
-COPY --from=image-builder $BUILD_DIR/$IMAGE_FILE_NAME_COMPRESSED $DIST_DIR/
-COPY --from=kernel-builder $BUILD_DIR/$KERNEL_FILE_NAME $DIST_DIR/
+#==== Copy artifacts from previous stages to run the RPi tasks
 
-RUN gunzip $DIST_DIR/$IMAGE_FILE_NAME_COMPRESSED
+# Get the kernel image
+RUN wget https://github.com/PRISMProtocolHub/biomi-rpi-kernel-builder/releases/download/$KERNEL_BRANCH/kernel.img
+
+# Get the raspios image
+RUN wget https://github.com/PRISMProtocolHub/biomi-rpi-image-builder/releases/download/$DISTRO_TAG/raspios.qcow2.gz
+RUN gunzip raspios.qcow2.gz
 
 EXPOSE 2222
 

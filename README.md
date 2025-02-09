@@ -101,6 +101,12 @@ docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci export --input /dist/image.qc
 ```
 The raw image should pop up alongside the virtual image in the mounted `dist` folder in the example above.
 
+A handy command to flash the file on Linux is;
+```
+sudo dd if=dist/distro.img of=/dev/sdX bs=4M status=progress
+```
+Substitute `sdX` by the SD card drive (`lsblk`).
+
 ## Automation
 Using Ansible, it is possible to automate the whole configuration process. Ansible requires docker-py to be installed. This can be done using `pip3 install docker-py`.
 

@@ -4,7 +4,7 @@ ARG KERNEL_BRANCH=rpi-6.6.y
 ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
 
 # Distro source
-ARG DISTRO_DATE=2024-07-04
+ARG DISTRO_DATE=2024-11-19
 ARG DISTRO_FILE=$DISTRO_DATE-raspios-bookworm-arm64-lite.img
 ARG DISTRO_IMG=https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-$DISTRO_DATE/$DISTRO_FILE.xz
 
@@ -48,7 +48,7 @@ COPY src/conf/99-qemu.rules /mnt/root/etc/udev/rules.d/
 # Run SSH server on startup
 RUN touch /mnt/boot/ssh
 
-# Allow SSH root login with no password
+# Allow SSH root login without password
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /mnt/root/etc/ssh/sshd_config \
  && sed -i 's/#PermitEmptyPasswords no/permitEmptyPasswords yes/' /mnt/root/etc/ssh/sshd_config
 
@@ -129,7 +129,7 @@ RUN apt-get update && apt install -y \
     qemu-efi-aarch64
 
 
-ENV PIP_BREAK_SYSTEM_PACKAGES 1
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 ARG APP_DIR
 
 # Copy and install Python dependencies
@@ -155,12 +155,12 @@ COPY --from=kernel-builder $BUILD_DIR/$KERNEL_FILE_NAME $BASE_DIR/$KERNEL_FILE_N
 ENTRYPOINT ["/app/run.py"]
 
 # Helper variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV DIST_DIR /dist
-ENV STORAGE_PATH /dev/mmcblk0
-ENV PORT 2222
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV DIST_DIR=/dist
+ENV STORAGE_PATH=/dev/mmcblk0
+ENV PORT=2222
 
-ENV BASE_DIR $BASE_DIR
-ENV APP_DIR $APP_DIR
-ENV IMAGE_FILE_NAME $IMAGE_FILE_NAME
-ENV KERNEL_FILE_NAME $KERNEL_FILE_NAME
+ENV BASE_DIR=$BASE_DIR
+ENV APP_DIR=$APP_DIR
+ENV IMAGE_FILE_NAME=$IMAGE_FILE_NAME
+ENV KERNEL_FILE_NAME=$KERNEL_FILE_NAME

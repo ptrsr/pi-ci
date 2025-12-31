@@ -106,14 +106,16 @@ ARG CROSS_COMPILE=aarch64-linux-gnu-
 
 # Compile default VM guest image
 RUN make -C $BUILD_DIR/linux defconfig kvm_guest.config \
- && make -C $BUILD_DIR/linux -j$(nproc) Image
+ && make -C $BUILD_DIR/linux -j$(nproc) Image modules
 
 # Customize guest image
 COPY src/conf/custom.conf $BUILD_DIR/linux/kernel/configs/custom.config
 RUN make -C $BUILD_DIR/linux custom.config \
- && make -C $BUILD_DIR/linux -j$(nproc) Image \
+ && make -C $BUILD_DIR/linux -j$(nproc) Image modules \
  && mv $BUILD_DIR/linux/arch/arm64/boot/Image $BUILD_DIR/kernel.img
 
+# Build kernel modules
+RUN mkdir -p $BUILD_DIR/k_mod && make -C $BUILD_DIR/linux -j$(nproc) INSTALL_MOD_PATH=$BUILD_DIR/k_mod modules_install
 
 # ---------------------------
 FROM ubuntu:24.04 AS emulator
@@ -150,6 +152,7 @@ RUN mkdir $BASE_DIR
 
 COPY --from=image-builder $BUILD_DIR/$IMAGE_FILE_NAME $BASE_DIR/$IMAGE_FILE_NAME
 COPY --from=kernel-builder $BUILD_DIR/$KERNEL_FILE_NAME $BASE_DIR/$KERNEL_FILE_NAME
+COPY --from=kernel-builder $BUILD_DIR/k_mod $BASE_DIR
 
 # Helper script on running container
 ENTRYPOINT ["/app/run.py"]

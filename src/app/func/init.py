@@ -4,17 +4,18 @@ from lib.process import run
 
 
 def check_base_file(file_name, base_dir, dist_dir):
+  base_file = f'{base_dir}/{file_name}'
+  dist_file = f'{dist_dir}/{file_name}'
   file_exists = os.path.exists(f'{dist_dir}/{file_name}')
   if not file_exists:
     # Copy base file to shared volume
     log.info(f"No '{file_name}' provided in volume, providing default one ...")
-    if os.path.isfile(f'{base_dir}/{file_name}'):
-      shutil.copyfile(f'{base_dir}/{file_name}', f'{dist_dir}/{file_name}')
-    if os.path.isdir(f'{base_dir}/{file_name}'):
-      shutil.copytree(f'{base_dir}/{file_name}', f'{dist_dir}/{file_name}', symlinks=False, ignore_dangling_symlinks=True)
-  else:
-    log.info(f"'{file_name}' already exists ...")
-
+    if os.path.isfile(base_file):
+      shutil.copyfile(base_file, dist_file)
+    if os.path.isdir(base_file):
+      shutil.copytree(base_file, dist_file, symlinks=False, ignore_dangling_symlinks=True)
+    return False # file did not exist so it was copied from the default
+  return True # file does exist
 
 def start(opts):
   # Check if (Docker) volume folder exists
@@ -37,7 +38,8 @@ def start(opts):
     
     # Check and resolve required files for running emulator
     for file in base_files:
-      check_base_file(file, opts.BASE_DIR, opts.DIST_DIR)
+      if check_base_file(file, opts.BASE_DIR, opts.DIST_DIR):
+        log.info(f"'{file}' already exists ...")
 
 
 # init command parser

@@ -2,13 +2,7 @@ import os, shutil, subprocess
 from lib.logger import log
 from lib.process import run
 
-
-def check_base_file(file_name, base_dir, dist_dir):
-  has_file = os.path.isfile(f'{dist_dir}/{file_name}')
-  if not has_file:
-    # Copy base file to shared volume
-    log.info(f"No '{file_name}' provided in volume, providing default one ...")
-    shutil.copyfile(f'{base_dir}/{file_name}', f'{dist_dir}/{file_name}')
+from func.init import check_base_file
 
 
 def start(opts):
@@ -25,7 +19,8 @@ def start(opts):
 
     base_files = [ 
       opts.IMAGE_FILE_NAME,
-      opts.KERNEL_FILE_NAME
+      opts.KERNEL_FILE_NAME,
+      'lib/modules/'
     ]
     
     # Check and resolve required files for running emulator
@@ -36,6 +31,7 @@ def start(opts):
   run_dir = opts.DIST_DIR if has_volume else opts.BASE_DIR
   image_path = f'{run_dir}/{opts.IMAGE_FILE_NAME}'
   kernel_path = f'{run_dir}/{opts.KERNEL_FILE_NAME}'
+  modules_path = f'{run_dir}/lib/modules/'
 
   # Start emulator
   log.info("Starting the emulator ...")
@@ -49,7 +45,7 @@ def start(opts):
     -append \"rw console=ttyAMA0 root=/dev/vda2 rootfstype=ext4 rootdelay=1 loglevel=2\" \
     -drive file={image_path},format=qcow2,id=hd0,if=none,cache=writeback \
     -device virtio-blk,drive=hd0,bootindex=0 \
-    -virtfs local,path=/{opts.BASE_DIR}/lib/modules,mount_tag=k_mod0,security_model=passthrough,id=k_mod0 \
+    -virtfs local,path={modules_path},mount_tag=k_mod0,security_model=passthrough,id=k_mod0 \
     -netdev user,id=mynet,hostfwd=tcp::2222-:22 \
     -device virtio-net-pci,netdev=mynet \
     -nographic -no-reboot

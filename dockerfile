@@ -115,7 +115,8 @@ RUN make -C $BUILD_DIR/linux custom.config \
  && mv $BUILD_DIR/linux/arch/arm64/boot/Image $BUILD_DIR/kernel.img
 
 # Build kernel modules
-RUN mkdir -p $BUILD_DIR/k_mod && make -C $BUILD_DIR/linux -j$(nproc) INSTALL_MOD_PATH=$BUILD_DIR/k_mod modules_install
+RUN mkdir -p $BUILD_DIR/k_mod && make -C $BUILD_DIR/linux -j$(nproc) \
+ INSTALL_MOD_PATH=$BUILD_DIR/k_mod modules_install
 
 # ---------------------------
 FROM ubuntu:24.04 AS emulator

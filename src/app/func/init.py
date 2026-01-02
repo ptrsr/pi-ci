@@ -4,11 +4,14 @@ from lib.process import run
 
 
 def check_base_file(file_name, base_dir, dist_dir):
-  has_file = os.path.isfile(f'{dist_dir}/{file_name}')
-  if not has_file:
+  file_exists = os.path.exists(f'{dist_dir}/{file_name}')
+  if not file_exists:
     # Copy base file to shared volume
     log.info(f"No '{file_name}' provided in volume, providing default one ...")
-    shutil.copyfile(f'{base_dir}/{file_name}', f'{dist_dir}/{file_name}')
+    if os.path.isfile(f'{base_dir}/{file_name}'):
+      shutil.copyfile(f'{base_dir}/{file_name}', f'{dist_dir}/{file_name}')
+    if os.path.isdir(f'{base_dir}/{file_name}'):
+      shutil.copytree(f'{base_dir}/{file_name}', f'{dist_dir}/{file_name}', symlinks=False, ignore_dangling_symlinks=True)
   else:
     log.info(f"'{file_name}' already exists ...")
 
@@ -28,7 +31,8 @@ def start(opts):
 
     base_files = [ 
       opts.IMAGE_FILE_NAME,
-      opts.KERNEL_FILE_NAME
+      opts.KERNEL_FILE_NAME,
+      'lib/modules/'
     ]
     
     # Check and resolve required files for running emulator

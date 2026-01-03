@@ -107,8 +107,8 @@ ARG KERNEL_GIT
 ARG KERNEL_BRANCH
 ARG BUILD_DIR
 
-# Clone the RPI kernel repo
-RUN git clone --single-branch --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
+# Clone the RPI kernel repo. If KERNEL_BRANCH is not set, the repo default will be used
+RUN git clone --depth=1 --single-branch ${KERNEL_BRANCH:+--branch $KERNEL_BRANCH} $KERNEL_GIT $BUILD_DIR/linux/
 
 # Kernel compile options
 ARG ARCH=arm64

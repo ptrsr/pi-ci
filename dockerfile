@@ -4,9 +4,11 @@ ARG KERNEL_BRANCH=rpi-6.6.y
 ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
 
 # Distro source
-ARG DISTRO_DATE=2024-11-19
-ARG DISTRO_FILE=$DISTRO_DATE-raspios-bookworm-arm64-lite.img
-ARG DISTRO_IMG=https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-$DISTRO_DATE/$DISTRO_FILE.xz
+ARG DISTRO_TYPE="lite_" # Options: "", "lite_", "full_", "oldstable_", "oldstable_lite_", "oldstable_full_"
+ARG DISTRO_DEBIAN_CODENAME="" # Options: "", "trixie", "bookworm", "bullseye", "buster"
+ARG DISTRO_DATE="2024-11-19" # Options: "", "YYYY*", "YYYY-MM*", "YYYY-MM-DD"
+# If the Debian base or relase date are unspecified, use the most recent
+# DISTRO_TYPE other than "lite_" requires a larger image, edit Line 80
 
 # Default directory and file names
 ARG BUILD_DIR=/build/
@@ -29,12 +31,20 @@ RUN apt-get update && apt install -y \
     linux-image-generic \
     xz-utils
 
-ARG DISTRO_FILE
-ARG DISTRO_IMG
-
-# Download raspbian distro
-RUN wget -nv -O /tmp/$DISTRO_FILE.xz $DISTRO_IMG \
- && unxz /tmp/$DISTRO_FILE.xz
+# Download raspbian distro that matches specified parameters
+ARG DISTRO_TYPE
+ARG DISTRO_DEBIAN_CODENAME
+ARG DISTRO_DATE
+ARG DISTRO_FILE="distro_download"
+RUN wget -q -O - https://downloads.raspberrypi.com/rss.xml \
+    | grep "images/raspios_${DISTRO_TYPE}arm64" \
+    | grep "${DISTRO_DEBIAN_CODENAME}-" \
+    | grep "${DISTRO_DATE}-" \
+    | sort \
+    | tail -n 1 \
+    | sed 's <link>\(.*\).torrent</link> \1 ' > /tmp/distro.url \
+    && wget -nv -O /tmp/$DISTRO_FILE.xz -i /tmp/distro.url \
+    && unxz /tmp/$DISTRO_FILE.xz
 
 # Extract distro boot and root
 RUN mkdir /mnt/root /mnt/boot \
@@ -98,8 +108,8 @@ ARG KERNEL_GIT
 ARG KERNEL_BRANCH
 ARG BUILD_DIR
 
-# Clone the RPI kernel repo
-RUN git clone --single-branch --depth=1 --branch $KERNEL_BRANCH $KERNEL_GIT $BUILD_DIR/linux/
+# Clone the RPI kernel repo. If KERNEL_BRANCH is not set, the repo default will be used
+RUN git clone --depth=1 --single-branch ${KERNEL_BRANCH:+--branch $KERNEL_BRANCH} $KERNEL_GIT $BUILD_DIR/linux/
 
 # Kernel compile options
 ARG ARCH=arm64

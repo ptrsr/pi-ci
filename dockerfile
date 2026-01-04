@@ -78,9 +78,10 @@ RUN rm /mnt/root/usr/lib/systemd/system/userconfig.service \
  && rm /mnt/root/etc/systemd/system/multi-user.target.wants/userconfig.service
 
  # Create new distro image from modified boot and root
+ARG IMAGE_SIZE=2G
 ARG BUILD_DIR
 RUN mkdir $BUILD_DIR
-RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:2G \
+RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:$IMAGE_SIZE \
  && guestfish add $BUILD_DIR/distro.img : run : mount /dev/sda1 / : glob copy-in /mnt/boot/* / : umount / : mount /dev/sda2 / : glob copy-in /mnt/root/* / \
  && sfdisk --part-type $BUILD_DIR/distro.img 1 c
 

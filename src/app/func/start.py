@@ -45,7 +45,7 @@ def start(opts):
     -append \"rw console=ttyAMA0 root=/dev/vda2 rootfstype=ext4 rootdelay=1 loglevel=2\" \
     -drive file={image_path},format=qcow2,id=hd0,if=none,cache=writeback \
     -device virtio-blk,drive=hd0,bootindex=0 \
-    -virtfs local,path={modules_path},mount_tag=k_mod0,security_model=passthrough,id=k_mod0 \
+    -virtfs local,path={modules_path},mount_tag=pi-ci_virt_kmods,security_model=passthrough,id=pi-ci_virt_kmods \
     -netdev user,id=mynet,hostfwd=tcp::2222-:22 \
     -device virtio-net-pci,netdev=mynet \
     -nographic -no-reboot

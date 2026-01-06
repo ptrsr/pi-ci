@@ -115,8 +115,8 @@ RUN make -C $BUILD_DIR/linux custom.config \
  && mv $BUILD_DIR/linux/arch/arm64/boot/Image $BUILD_DIR/kernel.img
 
 # Build kernel modules
-RUN mkdir -p $BUILD_DIR/k_mod && make -C $BUILD_DIR/linux -j$(nproc) \
- INSTALL_MOD_PATH=$BUILD_DIR/k_mod modules_install
+RUN mkdir -p $BUILD_DIR/virt_kmods && make -C $BUILD_DIR/linux -j$(nproc) \
+ INSTALL_MOD_PATH=$BUILD_DIR/virt_kmods modules_install
 
 # ---------------------------
 FROM ubuntu:24.04 AS emulator
@@ -153,7 +153,7 @@ RUN mkdir $BASE_DIR
 
 COPY --from=image-builder $BUILD_DIR/$IMAGE_FILE_NAME $BASE_DIR/$IMAGE_FILE_NAME
 COPY --from=kernel-builder $BUILD_DIR/$KERNEL_FILE_NAME $BASE_DIR/$KERNEL_FILE_NAME
-COPY --from=kernel-builder $BUILD_DIR/k_mod $BASE_DIR
+COPY --from=kernel-builder $BUILD_DIR/virt_kmods $BASE_DIR
 
 # Helper script on running container
 ENTRYPOINT ["/app/run.py"]

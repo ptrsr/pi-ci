@@ -1,19 +1,19 @@
 # PI-CI
 # Kernel source
-ARG KERNEL_BRANCH=rpi-6.6.y
+ARG KERNEL_BRANCH=rpi-6.12.y
 ARG KERNEL_GIT=https://github.com/raspberrypi/linux.git
 
 # Distro source
 ARG DISTRO_TYPE="lite_" # Options: "", "lite_", "full_", "oldstable_", "oldstable_lite_", "oldstable_full_"
-ARG DISTRO_DEBIAN_CODENAME="" # Options: "", "trixie", "bookworm", "bullseye", "buster"
-ARG DISTRO_DATE="2024-11-19" # Options: "", "YYYY*", "YYYY-MM*", "YYYY-MM-DD"
+ARG DISTRO_DEBIAN_CODENAME="trixie" # Options: "", "trixie", "bookworm", "bullseye", "buster"
+ARG DISTRO_DATE="2025-12-04" # Options: "", "YYYY*", "YYYY-MM*", "YYYY-MM-DD"
 # If the Debian base or relase date are unspecified, use the most recent
 # DISTRO_TYPE other than "lite_" requires a larger image, edit Line 80
 
 # Default directory and file names
-ARG BUILD_DIR=/build/
-ARG BASE_DIR=/base/
-ARG APP_DIR=/app/
+ARG BUILD_DIR=/build
+ARG BASE_DIR=/base
+ARG APP_DIR=/app
 
 ARG IMAGE_FILE_NAME=distro.qcow2
 ARG KERNEL_FILE_NAME=kernel.img
@@ -78,7 +78,7 @@ RUN rm /mnt/root/usr/lib/systemd/system/userconfig.service \
  && rm /mnt/root/etc/systemd/system/multi-user.target.wants/userconfig.service
 
  # Create new distro image from modified boot and root
-ARG IMAGE_SIZE=2G
+ARG IMAGE_SIZE=4G
 ARG BUILD_DIR
 RUN mkdir $BUILD_DIR
 RUN guestfish -N $BUILD_DIR/distro.img=bootroot:vfat:ext4:$IMAGE_SIZE \
@@ -148,7 +148,7 @@ COPY src/app/requirements.txt $APP_DIR/requirements.txt
 RUN pip3 install -r $APP_DIR/requirements.txt
 
 # Copy helper scripts
-COPY src/app/ $APP_DIR
+COPY src/app $APP_DIR
 
 # Copy build files
 ARG BASE_DIR
@@ -163,7 +163,7 @@ COPY --from=image-builder $BUILD_DIR/$IMAGE_FILE_NAME $BASE_DIR/$IMAGE_FILE_NAME
 COPY --from=kernel-builder $BUILD_DIR/$KERNEL_FILE_NAME $BASE_DIR/$KERNEL_FILE_NAME
 
 # Helper script on running container
-ENTRYPOINT ["/app/run.py"]
+ENTRYPOINT ["/bin/sh", "-c", "python3 /app/run.py \"$@\"", "--"]
 
 # Helper variables
 ENV PYTHONDONTWRITEBYTECODE=1

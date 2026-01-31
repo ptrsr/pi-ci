@@ -97,7 +97,7 @@ On the first boot of the real RPi, a program will automatically inflate the root
 ## Export
 The export function converts the virtual (`.qcow2`) image to a raw (`.img`) image. This is particularly handy when it is not possible to directly flash an image (e.g. when using WSL), as the raw image can be flashed using tools like [Balena Etcher](https://www.balena.io/etcher). The export command takes two optional arguments; the `--input` and `--output` path;
 ```sh
-docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci export --input /dist/image.qcow2 --output /dist/image.img
+docker run --rm -it -v $PWD/dist:/dist ptrsr/pi-ci export --input /dist/distro.qcow2 --output /dist/image.img
 ```
 The raw image should pop up alongside the virtual image in the mounted `dist` folder in the example above.
 
